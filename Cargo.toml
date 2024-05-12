@@ -1,0 +1,13 @@
+[package]
+name = "eight-ball"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "eight_ball"
+crate-type = ["cdylib"]
+
+[dependencies]
+itertools = "0.12.1"
+pyo3 = "0.20.0"
