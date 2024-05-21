@@ -70,3 +70,6 @@ docs/_build/
 
 # Pyenv
 .python-version
+
+# .ipynb checkpoints
+eight_ball/.ipynb_checkpoints
