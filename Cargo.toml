@@ -10,4 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 itertools = "0.12.1"
-pyo3 = "0.20.0"
+pyo3 = "0.21.2"

@@ -2,17 +2,15 @@ use pyo3::prelude::*;
 use simulation::Simulation;
 mod dynamics;
 mod simulation;
+use dynamics::dynamics::Ball;
 
-// #[pyclass]
-// pub struct EBSim {
-//     // A simulation of billard-ball particles interacting to model gas physics.
-//     pub no_of_balls: usize,
-//     simulation: Simulation,
-// }
+#[pyfunction]
+fn test() {
+    println!("This executed in Rust!");
+}
 
-// impl EBSim {
-//     #[new]
-//     pub fn new(no_of_balls) -> Self {
-
-//     }
-// }
+#[pymodule]
+fn eight_ball(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(test, m)?)?;
+    Ok(())
+}
