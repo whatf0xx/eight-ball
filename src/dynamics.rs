@@ -1,34 +1,40 @@
-use crate::maths::{SafeFloat, SafeFloatError, SafeFloatVec};
+use crate::maths::{approx_eq_f64, FloatVec};
+
+pub enum DynamicsError {
+    StationaryCollision,
+    PointParticleCollision,
+    IntersectingParticles,
+}
 
 #[derive(Clone, Default)]
 pub struct Ball {
-    pos: SafeFloatVec,
-    vel: SafeFloatVec,
-    r: SafeFloat,
+    pos: FloatVec,
+    vel: FloatVec,
+    r: f64,
 }
 
 impl Ball {
-    pub fn new(pos: SafeFloatVec, vel: SafeFloatVec, r: SafeFloat) -> Ball {
+    pub fn new(pos: FloatVec, vel: FloatVec, r: f64) -> Ball {
         Ball { pos, vel, r }
     }
 
-    pub fn step(&mut self, t: SafeFloat) {
+    pub fn step(&mut self, t: f64) {
         self.pos = self.pos + self.vel * t;
     }
 
-    pub fn pos(&self) -> &SafeFloatVec {
+    pub fn pos(&self) -> &FloatVec {
         &self.pos
     }
 
-    pub fn vel(&self) -> &SafeFloatVec {
+    pub fn vel(&self) -> &FloatVec {
         &self.vel
     }
 
-    pub fn set_vel(&mut self, new_vel: SafeFloatVec) {
+    pub fn set_vel(&mut self, new_vel: FloatVec) {
         self.vel = new_vel
     }
 
-    pub fn time_to_collision(&self, other: &Ball) -> Option<SafeFloat> {
+    pub fn time_to_collision(&self, other: &Ball) -> Option<f64> {
         let dr = self.pos - other.pos;
         let dv = self.vel - other.vel;
         let dv_squared = dv.dot(&dv);
@@ -39,18 +45,16 @@ impl Ball {
         if lhs < rhs {
             // equivalent to asking if discriminant < 0
             None
-        } else if dv_squared.is_zero() {
-            (-dv.dot(&dr) / dv_squared).ok()
         } else {
             // find the smallest positive solution
             let disc = lhs - rhs;
-            let r1 = (-(dv.dot(&dr) + disc) / dv_squared).unwrap();
-            let r2 = (-(dv.dot(&dr) - disc) / dv_squared).unwrap();
+            let r1 = -(dv.dot(&dr) + disc) / dv_squared;
+            let r2 = -(dv.dot(&dr) - disc) / dv_squared;
 
             let (r_min, r_max) = (r1.min(r2), r1.max(r2));
-            if r_min.is_positive() {
+            if r_min.is_sign_positive() {
                 Some(r_min)
-            } else if r_max.is_positive() {
+            } else if r_max.is_sign_positive() {
                 Some(r_max)
             } else {
                 // If time to collision is 0, we also say that they don't collide
@@ -61,11 +65,11 @@ impl Ball {
         }
     }
 
-    pub fn com_velocity(a: &Ball, b: &Ball) -> SafeFloatVec {
+    pub fn com_velocity(a: &Ball, b: &Ball) -> FloatVec {
         let vel_a = a.vel;
         let vel_b = b.vel;
 
-        (vel_a + vel_b) * SafeFloat::try_from(0.5).unwrap()
+        (vel_a + vel_b) * f64::try_from(0.5).unwrap()
     }
 
     pub fn touching(&self, other: &Ball) -> bool {
@@ -74,30 +78,27 @@ impl Ball {
         let relative_displacement = self.pos - other.pos;
         let distance_squared = relative_displacement.dot(&relative_displacement);
 
-        centres_distance_squared.approx_eq(&distance_squared, 1)
+        approx_eq_f64(centres_distance_squared, distance_squared, 1)
     }
 
-    pub fn normalised_difference(&self, other: &Ball) -> Result<SafeFloatVec, SafeFloatError> {
+    pub fn normalised_difference(&self, other: &Ball) -> Result<FloatVec, DynamicsError> {
         // calculate the normalised vector that points from the centre of self to other. If no
-        // such vector exists, return a SafeFloatError that reflects this.
+        // such vector exists, return a DynamicsError that reflects this.
         if self.pos.approx_eq(&other.pos, 1) {
             // if the Balls are on top of each other, it is impossible to draw a normaliseable
             // line between the two centres.
-            Err(SafeFloatError::BadVecError)
+            Err(DynamicsError::IntersectingParticles)
         } else {
             let diff = other.pos - self.pos;
             let diff_squared = diff.dot(&diff);
-            Ok((diff / diff_squared.sqrt()).unwrap())
+            Ok(diff / diff_squared.sqrt())
         }
     }
 
-    pub fn calculate_collision(
-        &self,
-        other: &Ball,
-    ) -> Result<(SafeFloatVec, SafeFloatVec), SafeFloatError> {
-        // calculate the trajectories following a collision for `self` and `other` and return them as the `Ok()`
-        // variant of a `Result`. If the collision calculation generates an arithmetic error, perhaps because the
-        // balls were relatively stationary, or both have zero volume, then an `Err()` with appropriate
+    pub fn collide(&mut self, other: &mut Ball) -> Result<(), DynamicsError> {
+        // Calculate and update the trajectories following a collision for `self` and `other`.
+        // If this would generate an arithmetic error, for example because the balls were
+        // relatively stationary, or both have zero volume, then an `Err()` with appropriate
         // information is returned, instead.
 
         // The calculation is performed using the 'line of centers' method: assuming an elastic collision,
@@ -114,9 +115,8 @@ impl Ball {
         let alpha_2 = other.vel.dot(&loc);
         let beta_2 = other.vel.dot(&normed_normal);
 
-        Ok((
-            (alpha_2 * loc + beta_1 * normed_normal),
-            (alpha_1 * loc + beta_2 * normed_normal),
-        ))
+        self.set_vel(alpha_2 * loc + beta_1 * normed_normal);
+        other.set_vel(alpha_1 * loc + beta_2 * normed_normal);
+        Ok(())
     }
 }

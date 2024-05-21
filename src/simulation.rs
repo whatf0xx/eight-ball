@@ -1,6 +1,7 @@
-use crate::dynamics::Ball;
-use crate::maths::SafeFloat;
+use crate::dynamics::{Ball, DynamicsError};
+use crate::maths::approx_eq_f64;
 use itertools::Itertools;
+use pyo3::prelude::*;
 use std::cell::RefCell;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
@@ -12,13 +13,13 @@ struct CollisionEvent {
     // stored one will return inequality.
     i: usize,
     j: usize,
-    t: SafeFloat,
-    v_dot_prod: SafeFloat,
+    t: f64,
+    v_dot_prod: f64,
 }
 
 impl PartialEq for CollisionEvent {
     fn eq(&self, other: &Self) -> bool {
-        self.t.approx_eq(&other.t, 1)
+        approx_eq_f64(self.t, other.t, 1)
     }
 }
 
@@ -26,13 +27,13 @@ impl Eq for CollisionEvent {}
 
 impl PartialOrd for CollisionEvent {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.t.cmp(&other.t))
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for CollisionEvent {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.t.cmp(&other.t)
+        self.t.total_cmp(&other.t)
     }
 }
 
@@ -57,8 +58,10 @@ fn generate_initial_collision_heap(balls: &[RefCell<Ball>]) -> BinaryHeap<Revers
 
     heap
 }
+
+#[pyclass]
 pub struct Simulation {
-    global_time: SafeFloat,
+    global_time: f64,
     balls: Vec<RefCell<Ball>>,
     collisions: BinaryHeap<Reverse<CollisionEvent>>,
 }
@@ -68,13 +71,13 @@ impl Simulation {
         let balls = balls.to_vec();
         let collisions = generate_initial_collision_heap(&balls);
         Simulation {
-            global_time: SafeFloat::Zero,
+            global_time: 0.0,
             balls: balls.to_vec(),
             collisions,
         }
     }
 
-    pub fn step(&mut self, t: SafeFloat) {
+    pub fn step(&mut self, t: f64) {
         // Move the simulation forward in time by `t` seconds.
         for ball in self.balls.iter() {
             ball.borrow_mut().step(t)
@@ -85,23 +88,31 @@ impl Simulation {
         // For the ball at the given index, calculate its next collision with
         // every other ball and push the resulting collision event to the event
         // queue. If no collision exists, do nothing.
-        if let Some(ball) = self.balls.get(ball_index) {
-            let (mut min_time, mut other) = (SafeFloat::Zero, None); // I am unsure if there is a good way to deal with this compiler warning
-            let (left, right) = self.balls.split_at(ball_index);
-            for (i, curr_other_ref) in left.iter().chain(right[1..].iter()).enumerate() {
-                let curr_other = curr_other_ref.borrow();
-                let time = ball.borrow().time_to_collision(&curr_other);
-                if let Some(time) = time {
-                    if time < min_time {
-                        min_time = time;
-                        other = Some(i);
-                    }
+        let ball = self.balls[ball_index].borrow();
+        let (mut min_time, mut other_index) = (f64::INFINITY, None);
+
+        let (left, right) = self.balls.split_at(ball_index);
+        for (i, curr_other_ref) in left.iter().chain(right[1..].iter()).enumerate() {
+            let curr_other = curr_other_ref.borrow();
+            if let Some(time) = ball.time_to_collision(&curr_other) {
+                if time < min_time {
+                    min_time = time;
+                    other_index = Some(i);
                 }
             }
         }
+        if let Some(j) = other_index {
+            let v_dot_prod = ball.vel().dot(self.balls[j].borrow().vel());
+            self.collisions.push(Reverse(CollisionEvent {
+                i: ball_index,
+                j,
+                t: min_time,
+                v_dot_prod,
+            }));
+        }
     }
 
-    fn step_to_next_collision(&mut self) {
+    fn step_to_next_collision(&mut self) -> Result<(), DynamicsError> {
         // Step through to the next collision event that is scheduled to occur.
         // Check that the collision should indeed occur, and if so, execute it.
         // Calculate the next collision to occur for each of the collided balls,
@@ -121,7 +132,7 @@ impl Simulation {
                     let (p, q) = (p_refc.borrow(), q_refc.borrow());
                     p.vel().dot(q.vel())
                 };
-                if calc_dot_prod.approx_eq(&v_dot_prod, 1) {
+                if approx_eq_f64(calc_dot_prod, v_dot_prod, 1) {
                     // This executes if the `CollisionEvent` is valid, i.e. the `Ball`s involved
                     // didn't change trajectories in the meantime.
                     self.step(t);
@@ -129,16 +140,16 @@ impl Simulation {
                         self.balls[col.i].borrow_mut(),
                         self.balls[col.j].borrow_mut(),
                     );
-                    // Looking at the below, this might as well be wrapped up in a .collide() method
-                    // which can return Result<(), SafeFloatError> for the purpose of the currently
-                    // unused error handling. How do we do logs and warnings in Rust, anwyay?
-                    let (p_new_vel, q_new_vel) = p.calculate_collision(&q).unwrap();
-                    p.set_vel(p_new_vel);
-                    q.set_vel(q_new_vel);
+                    p.collide(&mut q)?;
+                    drop(p);
+                    drop(q);
 
                     // Finally, work out the new CollisionEvents for each ball.
+                    self.add_soonest_collision(col.i);
+                    self.add_soonest_collision(col.j);
                 }
             }
         }
+        Ok(())
     }
 }
