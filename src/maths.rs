@@ -1,8 +1,9 @@
 use std::{cmp, ops};
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Default)]
 pub enum SafeFloat {
     SafeNonZero(f64),
+    #[default]
     Zero,
 }
 
@@ -210,7 +211,7 @@ impl Ord for SafeFloat {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct SafeFloatVec {
     x: SafeFloat,
     y: SafeFloat,

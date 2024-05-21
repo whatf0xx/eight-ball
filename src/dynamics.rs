@@ -1,6 +1,6 @@
 use crate::maths::{SafeFloat, SafeFloatError, SafeFloatVec};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Ball {
     pos: SafeFloatVec,
     vel: SafeFloatVec,
