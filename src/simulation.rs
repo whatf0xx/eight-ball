@@ -1,7 +1,6 @@
-use crate::dynamics::{Ball, DynamicsError};
-use crate::maths::approx_eq_f64;
+use crate::dynamics::dynamics::{Ball, DynamicsError};
+use crate::dynamics::maths::approx_eq_f64;
 use itertools::Itertools;
-use pyo3::prelude::*;
 use std::cell::RefCell;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
@@ -59,7 +58,6 @@ fn generate_initial_collision_heap(balls: &[RefCell<Ball>]) -> BinaryHeap<Revers
     heap
 }
 
-#[pyclass]
 pub struct Simulation {
     global_time: f64,
     balls: Vec<RefCell<Ball>>,
