@@ -1,4 +1,3 @@
-use pyo3::prelude::*;
 use std::ops;
 
 pub fn approx_eq_f64(a: f64, b: f64, ulp: u64) -> bool {
@@ -9,11 +8,17 @@ pub fn approx_eq_f64(a: f64, b: f64, ulp: u64) -> bool {
     diff <= ulp
 }
 
-#[pyclass]
 #[derive(Clone, Copy, Default)]
 pub struct FloatVec {
-    x: f64,
-    y: f64,
+    pub x: f64,
+    pub y: f64,
+}
+
+impl From<(f64, f64)> for FloatVec {
+    fn from(value: (f64, f64)) -> Self {
+        let (x, y) = value;
+        FloatVec { x, y }
+    }
 }
 
 impl ops::Add<FloatVec> for FloatVec {

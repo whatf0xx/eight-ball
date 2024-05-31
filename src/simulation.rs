@@ -1,6 +1,8 @@
 use crate::dynamics::dynamics::{Ball, DynamicsError};
 use crate::dynamics::maths::approx_eq_f64;
 use itertools::Itertools;
+use pyo3::prelude::*;
+use pyo3::types::PyList;
 use std::cell::RefCell;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
@@ -58,14 +60,43 @@ fn generate_initial_collision_heap(balls: &[RefCell<Ball>]) -> BinaryHeap<Revers
     heap
 }
 
+#[pyclass(subclass)]
+#[pyo3(name = "_Simulation")]
 pub struct Simulation {
+    #[pyo3(get)]
     global_time: f64,
     balls: Vec<RefCell<Ball>>,
     collisions: BinaryHeap<Reverse<CollisionEvent>>,
 }
 
+#[pymethods]
 impl Simulation {
-    pub fn new(balls: &mut [RefCell<Ball>]) -> Simulation {
+    #[new]
+    pub fn py_new() -> Simulation {
+        Simulation {
+            global_time: 0.0,
+            balls: Vec::new(),
+            collisions: BinaryHeap::new(),
+        }
+    }
+
+    pub fn add_ball(&mut self, ball: Ball) {
+        self.balls.push(ball.to_owned())
+    }
+
+    #[getter]
+    pub fn get_balls(&self) -> Vec<Ball> {
+        let mut copied_balls = Vec::new();
+        for ball in &self.balls {
+            copied_balls.push(ball.borrow().to_owned());
+        }
+
+        copied_balls
+    }
+}
+
+impl Simulation {
+    pub fn new(balls: &[RefCell<Ball>]) -> Simulation {
         let balls = balls.to_vec();
         let collisions = generate_initial_collision_heap(&balls);
         Simulation {

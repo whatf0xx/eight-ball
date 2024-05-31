@@ -7,19 +7,44 @@ pub enum DynamicsError {
     IntersectingParticles,
 }
 
-#[pyclass]
+#[pyclass(subclass)]
+#[pyo3(name = "_Ball")]
 #[derive(Clone, Default)]
 pub struct Ball {
     pos: FloatVec,
     vel: FloatVec,
+    #[pyo3(get, set)]
     r: f64,
 }
 
 #[pymethods]
 impl Ball {
     #[new]
-    fn py_new(pos: FloatVec, vel: FloatVec, r: f64) -> Self {
-        Self::new(pos, vel, r)
+    #[pyo3(signature = (pos=(0f64, 0f64), vel=(0f64, 0f64), r=1f64))]
+    fn py_new(pos: (f64, f64), vel: (f64, f64), r: f64) -> Self {
+        Self::new(pos.into(), vel.into(), r)
+    }
+
+    #[getter(pos)]
+    fn py_get_pos(&self) -> (f64, f64) {
+        (self.pos.x, self.pos.y)
+    }
+
+    #[setter(pos)]
+    fn py_set_pos(&mut self, pos: (f64, f64)) {
+        let (x, y) = pos;
+        self.pos = FloatVec { x, y }
+    }
+
+    #[getter(vel)]
+    fn py_get_vel(&self) -> (f64, f64) {
+        (self.vel.x, self.vel.y)
+    }
+
+    #[setter(vel)]
+    fn py_set_vel(&mut self, vel: (f64, f64)) {
+        let (x, y) = vel;
+        self.vel = FloatVec { x, y }
     }
 }
 
