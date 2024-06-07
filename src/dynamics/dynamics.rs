@@ -1,4 +1,5 @@
 use crate::dynamics::maths::{approx_eq_f64, FloatVec};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 pub enum DynamicsError {
@@ -46,15 +47,43 @@ impl Ball {
         let (x, y) = vel;
         self.vel = FloatVec { x, y }
     }
+
+    pub fn step(&mut self, t: f64) {
+        self.pos += self.vel * t;
+    }
+
+    #[pyo3(name = "time_to_collision")]
+    fn py_time_to_collision(&self, other: Py<Ball>) -> Option<f64> {
+        Python::with_gil(|py| {
+            let other = other.borrow(py);
+            self.time_to_collision(&other)
+        })
+    }
+
+    #[pyo3(name = "collide")]
+    fn py_collide(&mut self, other: Py<Ball>) -> PyResult<()> {
+        Python::with_gil(|py| {
+            let mut other = other.borrow_mut(py);
+            self.collide(&mut other)
+                .map_err(|_| PyValueError::new_err("Problem in the collision."))
+        })
+    }
+
+    fn pair_hash(&self, other: Py<Ball>) -> f64 {
+        Python::with_gil(|py| {
+            let other = other.borrow(py);
+            self.vel.dot(&other.vel)
+        })
+    }
+
+    fn v_squared(&self) -> f64 {
+        self.vel.dot(&self.vel)
+    }
 }
 
 impl Ball {
     pub fn new(pos: FloatVec, vel: FloatVec, r: f64) -> Ball {
         Ball { pos, vel, r }
-    }
-
-    pub fn step(&mut self, t: f64) {
-        self.pos = self.pos + self.vel * t;
     }
 
     pub fn pos(&self) -> &FloatVec {
@@ -83,8 +112,8 @@ impl Ball {
         } else {
             // find the smallest positive solution
             let disc = lhs - rhs;
-            let r1 = -(dv.dot(&dr) + disc) / dv_squared;
-            let r2 = -(dv.dot(&dr) - disc) / dv_squared;
+            let r1 = -(dv.dot(&dr) + disc.sqrt()) / dv_squared;
+            let r2 = -(dv.dot(&dr) - disc.sqrt()) / dv_squared;
 
             let (r_min, r_max) = (r1.min(r2), r1.max(r2));
             if r_min.is_sign_positive() {
@@ -104,7 +133,7 @@ impl Ball {
         let vel_a = a.vel;
         let vel_b = b.vel;
 
-        (vel_a + vel_b) * f64::try_from(0.5).unwrap()
+        (vel_a + vel_b) * 0.5
     }
 
     pub fn touching(&self, other: &Ball) -> bool {
@@ -150,8 +179,8 @@ impl Ball {
         let alpha_2 = other.vel.dot(&loc);
         let beta_2 = other.vel.dot(&normed_normal);
 
-        self.set_vel(alpha_2 * loc + beta_1 * normed_normal);
-        other.set_vel(alpha_1 * loc + beta_2 * normed_normal);
+        self.set_vel(alpha_1 * loc + beta_2 * normed_normal);
+        other.set_vel(alpha_2 * loc + beta_1 * normed_normal);
         Ok(())
     }
 }

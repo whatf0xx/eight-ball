@@ -32,6 +32,12 @@ impl ops::Add<FloatVec> for FloatVec {
     }
 }
 
+impl ops::AddAssign<FloatVec> for FloatVec {
+    fn add_assign(&mut self, rhs: FloatVec) {
+        *self = *self + rhs;
+    }
+}
+
 impl ops::Sub<FloatVec> for FloatVec {
     type Output = FloatVec;
 

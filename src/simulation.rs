@@ -1,9 +1,8 @@
 use crate::dynamics::dynamics::{Ball, DynamicsError};
 use crate::dynamics::maths::approx_eq_f64;
 use itertools::Itertools;
+use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
-use pyo3::types::PyList;
-use std::cell::RefCell;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
@@ -38,78 +37,85 @@ impl Ord for CollisionEvent {
     }
 }
 
-fn generate_initial_collision_heap(balls: &[RefCell<Ball>]) -> BinaryHeap<Reverse<CollisionEvent>> {
-    // Given a set of balls, calculate the order in which they will collide, assuming that
-    // all their velocities remain constant.
-    let mut heap = BinaryHeap::new();
-    for enum_pair in balls.iter().enumerate().combinations(2) {
-        let (i, p) = enum_pair[0];
-        let (j, q) = enum_pair[1];
-        let (p, q) = (p.borrow(), q.borrow());
-        if let Some(t) = p.time_to_collision(&q) {
-            let v_dot_prod = p.vel().dot(q.vel());
-            heap.push(Reverse(CollisionEvent {
-                i,
-                j,
-                t,
-                v_dot_prod,
-            }))
-        }
-    }
-
-    heap
-}
-
 #[pyclass(subclass)]
 #[pyo3(name = "_Simulation")]
 pub struct Simulation {
     #[pyo3(get)]
     global_time: f64,
-    balls: Vec<RefCell<Ball>>,
+    balls: Vec<Ball>,
     collisions: BinaryHeap<Reverse<CollisionEvent>>,
 }
 
-#[pymethods]
+// #[pymethods]
+// impl Simulation {
+//     #[new]
+//     pub fn py_new() -> Simulation {
+//         Simulation {
+//             global_time: 0.0,
+//             balls: Vec::new(),
+//             collisions: BinaryHeap::new(),
+//         }
+//     }
+
+//     pub fn add_ball(&mut self, ball: Py<Ball>) {
+//         self.balls.push(ball)
+//     }
+
+//     #[getter]
+//     pub fn get_balls(&self) -> Vec<Py<Ball>> {
+//         self.balls
+//             .iter()
+//             .map(|ball| Python::with_gil(|py| Py::clone_ref(ball, py)))
+//             .collect()
+//     }
+
+//     pub fn ball_by_index(&self, index: usize) -> PyResult<Py<Ball>> {
+//         match self.balls.get(index) {
+//             Some(ball) => Ok(Python::with_gil(|py| Py::clone_ref(ball, py))),
+//             None => Err(PyIndexError::new_err(format!(
+//                 "self.balls has length {} but index given of {}",
+//                 self.balls.len(),
+//                 index
+//             ))),
+//         }
+//     }
+// }
+
 impl Simulation {
-    #[new]
-    pub fn py_new() -> Simulation {
-        Simulation {
-            global_time: 0.0,
-            balls: Vec::new(),
-            collisions: BinaryHeap::new(),
-        }
-    }
+    // pub fn new(balls: &[Ball]) -> Simulation {
+    //     let balls = balls.iter().map(|ball| Py::new())
+    //     let mut sim = Simulation {
+    //         global_time: 0.0,
+    //         balls: balls,
+    //         collisions: BinaryHeap::new(),
+    //     };
+    //     sim.generate_collision_heap();
+    //     sim
+    // }
 
-    pub fn add_ball(&mut self, ball: Ball) {
-        self.balls.push(ball.to_owned())
-    }
-
-    #[getter]
-    pub fn get_balls(&self) -> Vec<Ball> {
-        let mut copied_balls = Vec::new();
-        for ball in &self.balls {
-            copied_balls.push(ball.borrow().to_owned());
-        }
-
-        copied_balls
-    }
-}
-
-impl Simulation {
-    pub fn new(balls: &[RefCell<Ball>]) -> Simulation {
-        let balls = balls.to_vec();
-        let collisions = generate_initial_collision_heap(&balls);
-        Simulation {
-            global_time: 0.0,
-            balls: balls.to_vec(),
-            collisions,
+    fn generate_collision_heap(&mut self) {
+        // Given a set of balls, calculate the order in which they will collide, assuming that
+        // all their velocities remain constant.
+        let heap = &mut self.collisions;
+        for enum_pair in self.balls.iter().enumerate().combinations(2) {
+            let (i, p) = enum_pair[0];
+            let (j, q) = enum_pair[1];
+            if let Some(t) = p.time_to_collision(&q) {
+                let v_dot_prod = p.vel().dot(q.vel());
+                heap.push(Reverse(CollisionEvent {
+                    i,
+                    j,
+                    t,
+                    v_dot_prod,
+                }))
+            }
         }
     }
 
     pub fn step(&mut self, t: f64) {
         // Move the simulation forward in time by `t` seconds.
-        for ball in self.balls.iter() {
-            ball.borrow_mut().step(t)
+        for ball in self.balls.iter_mut() {
+            ball.step(t)
         }
     }
 
@@ -117,12 +123,15 @@ impl Simulation {
         // For the ball at the given index, calculate its next collision with
         // every other ball and push the resulting collision event to the event
         // queue. If no collision exists, do nothing.
-        let ball = self.balls[ball_index].borrow();
+        let ball = &self.balls[ball_index];
         let (mut min_time, mut other_index) = (f64::INFINITY, None);
 
         let (left, right) = self.balls.split_at(ball_index);
-        for (i, curr_other_ref) in left.iter().chain(right[1..].iter()).enumerate() {
-            let curr_other = curr_other_ref.borrow();
+        let (is, js) = (0..ball_index, ball_index + 1..self.balls.len());
+        let balls_enum = is.zip(left.iter()).chain(js.zip(right.iter()));
+
+        for (i, curr_other_ref) in balls_enum {
+            let curr_other = curr_other_ref;
             if let Some(time) = ball.time_to_collision(&curr_other) {
                 if time < min_time {
                     min_time = time;
@@ -130,8 +139,9 @@ impl Simulation {
                 }
             }
         }
+
         if let Some(j) = other_index {
-            let v_dot_prod = ball.vel().dot(self.balls[j].borrow().vel());
+            let v_dot_prod = ball.vel().dot(self.balls[j].vel());
             self.collisions.push(Reverse(CollisionEvent {
                 i: ball_index,
                 j,
@@ -149,34 +159,27 @@ impl Simulation {
         // If there are no collisions to execute, do nothing.
         if let Some(reverse_collision) = self.collisions.pop() {
             let col = reverse_collision.0; // this line just gets rid of the Reverse()
-            let (op_p_refc, op_q_refc, v_dot_prod, t) = (
-                self.balls.get(col.i),
-                self.balls.get(col.j),
+            let (p, q, v_dot_prod, t) = (
+                &self.balls[col.i],
+                &self.balls[col.j],
                 col.v_dot_prod,
                 col.t,
             );
-            if let (Some(p_refc), Some(q_refc)) = (op_p_refc, op_q_refc) {
-                // First, make sure that we actually point to valid members of the balls `Vec`.
-                let calc_dot_prod = {
-                    let (p, q) = (p_refc.borrow(), q_refc.borrow());
-                    p.vel().dot(q.vel())
-                };
-                if approx_eq_f64(calc_dot_prod, v_dot_prod, 1) {
-                    // This executes if the `CollisionEvent` is valid, i.e. the `Ball`s involved
-                    // didn't change trajectories in the meantime.
-                    self.step(t);
-                    let (mut p, mut q) = (
-                        self.balls[col.i].borrow_mut(),
-                        self.balls[col.j].borrow_mut(),
-                    );
-                    p.collide(&mut q)?;
-                    drop(p);
-                    drop(q);
+            let calc_dot_prod = p.vel().dot(q.vel());
+            if approx_eq_f64(calc_dot_prod, v_dot_prod, 1) {
+                // This executes if the `CollisionEvent` is valid, i.e. the `Ball`s involved
+                // didn't change trajectories in the meantime.
+                self.step(t);
+                let mut p_local = self.balls[col.i].clone();
+                let q = &mut self.balls[col.j];
+                // let (p, q) = (&mut self.balls[col.i], &mut self.balls[col.j]);
+                p_local.collide(q)?;
 
-                    // Finally, work out the new CollisionEvents for each ball.
-                    self.add_soonest_collision(col.i);
-                    self.add_soonest_collision(col.j);
-                }
+                self.balls[col.i] = p_local;
+
+                // Finally, work out the new CollisionEvents for each ball.
+                self.add_soonest_collision(col.i);
+                self.add_soonest_collision(col.j);
             }
         }
         Ok(())
