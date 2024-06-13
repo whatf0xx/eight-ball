@@ -48,8 +48,10 @@ impl Ball {
         self.vel = FloatVec { x, y }
     }
 
-    pub fn step(&mut self, t: f64) {
-        self.pos += self.vel * t;
+    #[pyo3(signature = (t, delta=1e-6))]
+    #[pyo3(name = "step")]
+    fn py_step(&mut self, t: f64, delta: f64) {
+        self.pos += self.vel * t * (1. - delta);
     }
 
     #[pyo3(name = "time_to_collision")]
@@ -69,10 +71,21 @@ impl Ball {
         })
     }
 
+    #[pyo3(name = "container_collide")]
+    fn py_container_colllide(&mut self, container: Py<Ball>) -> PyResult<()> {
+        Python::with_gil(|py| {
+            let container = container.borrow(py);
+            self.container_collide(&container)
+                .map_err(|_| PyValueError::new_err("Problem in the collision."))
+        })
+    }
+
     fn pair_hash(&self, other: Py<Ball>) -> f64 {
         Python::with_gil(|py| {
             let other = other.borrow(py);
-            self.vel.dot(&other.vel)
+            let sum = self.vel + other.vel;
+            let unit = FloatVec::new(1., 0.);
+            sum.dot(&unit)
         })
     }
 
@@ -96,6 +109,10 @@ impl Ball {
 
     pub fn set_vel(&mut self, new_vel: FloatVec) {
         self.vel = new_vel
+    }
+
+    pub fn step(&mut self, t: f64) {
+        self.pos += self.vel * t
     }
 
     pub fn time_to_collision(&self, other: &Ball) -> Option<f64> {
@@ -181,6 +198,20 @@ impl Ball {
 
         self.set_vel(alpha_1 * loc + beta_2 * normed_normal);
         other.set_vel(alpha_2 * loc + beta_1 * normed_normal);
+        Ok(())
+    }
+
+    pub fn container_collide(&mut self, container: &Ball) -> Result<(), DynamicsError> {
+        // Calculate and update the trajectory for a `Ball` colliding with a container, i.e.
+        // a stationary `Ball` which we also assume totally contains `self`.
+
+        let normed_normal = self.normalised_difference(container)?;
+        let loc = normed_normal.anti_clockwise_perpendicular();
+
+        let alpha = self.vel.dot(&loc);
+        let beta = self.vel.dot(&normed_normal);
+
+        self.set_vel(alpha * loc - beta * normed_normal);
         Ok(())
     }
 }
