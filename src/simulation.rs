@@ -1,7 +1,6 @@
-use crate::dynamics::dynamics::{Ball, DynamicsError};
+use crate::dynamics::ball::{Ball, DynamicsError};
 use crate::dynamics::maths::approx_eq_f64;
 use itertools::Itertools;
-use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
@@ -14,7 +13,7 @@ struct CollisionEvent {
     i: usize,
     j: usize,
     t: f64,
-    v_dot_prod: f64,
+    pair_hash: f64,
 }
 
 impl PartialEq for CollisionEvent {
@@ -106,7 +105,7 @@ impl Simulation {
                     i,
                     j,
                     t,
-                    v_dot_prod,
+                    pair_hash: v_dot_prod,
                 }))
             }
         }
@@ -146,7 +145,7 @@ impl Simulation {
                 i: ball_index,
                 j,
                 t: min_time,
-                v_dot_prod,
+                pair_hash: v_dot_prod,
             }));
         }
     }
@@ -159,12 +158,8 @@ impl Simulation {
         // If there are no collisions to execute, do nothing.
         if let Some(reverse_collision) = self.collisions.pop() {
             let col = reverse_collision.0; // this line just gets rid of the Reverse()
-            let (p, q, v_dot_prod, t) = (
-                &self.balls[col.i],
-                &self.balls[col.j],
-                col.v_dot_prod,
-                col.t,
-            );
+            let (p, q, v_dot_prod, t) =
+                (&self.balls[col.i], &self.balls[col.j], col.pair_hash, col.t);
             let calc_dot_prod = p.vel().dot(q.vel());
             if approx_eq_f64(calc_dot_prod, v_dot_prod, 1) {
                 // This executes if the `CollisionEvent` is valid, i.e. the `Ball`s involved
