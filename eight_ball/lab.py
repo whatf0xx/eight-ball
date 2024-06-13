@@ -242,4 +242,3 @@ if __name__ == "__main__":
     lab = Lab([ball1, ball2], step=.1)
     lab.run()
     plt.show()
-
