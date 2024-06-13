@@ -131,7 +131,7 @@ impl Simulation {
 
         for (i, curr_other_ref) in balls_enum {
             let curr_other = curr_other_ref;
-            if let Some(time) = ball.time_to_collision(&curr_other) {
+            if let Some(time) = ball.time_to_collision(curr_other) {
                 if time < min_time {
                     min_time = time;
                     other_index = Some(i);
@@ -150,6 +150,27 @@ impl Simulation {
         }
     }
 
+    fn collide_by_index(&mut self, i: usize, j: usize) -> Result<(), DynamicsError> {
+        // Calculate the new trajectories for `Ball`s at indices `i` and `j`
+        // following a collision between them.
+
+        // Because the `Ball`s are stored in a `Vec`, obtaining mutable references
+        // to both of them simultaneously requires unsafe code. To prevent multiple
+        // mutable references from every actually occuring, it is checked first that
+        // i and j are definitely distinct.
+        assert_ne!(i, j);
+        let i_ptr = &mut self.balls[i] as *mut Ball;
+        let j_ptr = &mut self.balls[j] as *mut Ball;
+
+        unsafe {
+            let ball_i = i_ptr.as_mut().unwrap();
+            let ball_j = j_ptr.as_mut().unwrap();
+            ball_i.collide(ball_j)?;
+        }
+
+        Ok(())
+    }
+
     fn step_to_next_collision(&mut self) -> Result<(), DynamicsError> {
         // Step through to the next collision event that is scheduled to occur.
         // Check that the collision should indeed occur, and if so, execute it.
@@ -165,12 +186,7 @@ impl Simulation {
                 // This executes if the `CollisionEvent` is valid, i.e. the `Ball`s involved
                 // didn't change trajectories in the meantime.
                 self.step(t);
-                let mut p_local = self.balls[col.i].clone();
-                let q = &mut self.balls[col.j];
-                // let (p, q) = (&mut self.balls[col.i], &mut self.balls[col.j]);
-                p_local.collide(q)?;
-
-                self.balls[col.i] = p_local;
+                self.collide_by_index(col.i, col.j)?;
 
                 // Finally, work out the new CollisionEvents for each ball.
                 self.add_soonest_collision(col.i);

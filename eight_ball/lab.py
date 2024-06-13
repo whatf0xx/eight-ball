@@ -206,39 +206,59 @@ class Lab:
             self.calculate_collisions_for_ball(i)
             self.calculate_collisions_for_ball(j)
 
+    def step_to_next_collision(self):
+        """
+        Move the simulation forward to the next collision, perform the
+        collision, and update the collision queue with the involved
+        `Ball`s' new trajectories. This does NOT update the graphical
+        animation, that should be handled at the end of the step.
+        """
+        time, i, j, _ = self.next_collision  # don't need to check pair_hash
+        delta_t = time - self.global_time
+        assert delta_t >= 0, f"Collision took place in the past!?\n{time=};\t{self.global_time=}"
+        for ball in self.balls:
+            ball.step(delta_t)
+        self.global_time = time
+        self.collide_update_queue(i, j)
+        self.next_collision = self.get_next_collision()
+
+
     def advance_through_collision(self):
         """
         Advance the simulation, calculating the kinematics of the collision
         event that happens during the step.
         """
-        before = self.next_collision[0] - self.global_time
-        after = self.step - before
+        original_step = self.global_time + self.step
+        while original_step > self.next_collision[0]:
+            # if we just stepped, we would miss a `CollisionEvent`
+            self.step_to_next_collision()
 
-        for ball in self.balls:
-            ball.step(before)
-        self.global_time += before
-
-        i, j = self.next_collision[1], self.next_collision[2]
-        self.collide_update_queue(i, j)
-        self.next_collision = self.get_next_collision()
-
+        remaining_step = original_step - self.global_time
         for ball, patch in zip(self.balls, self.drawer.ball_patches):
-            ball.step(after)
+            ball.step(remaining_step)
             patch.set_center(ball.pos)
-        self.global_time += after
+        self.global_time = original_step
 
-    def run(self):
+    def run(self, frames=500, interval=20):
         """
         Invoke the `run` method of the contained `LabDrawer` object to
         run the simulation and corresponding animation.
         """
-        self.drawer.run(self.update)
+        self.drawer.run(self.update, frames=frames, interval=interval)
 
 
 if __name__ == "__main__":
-    ball1 = Ball(pos=(0.21, 0.2), vel=(0.04, 0.04), r=0.05)
-    ball2 = Ball(pos=(0.8, 0.8), vel=(-0.02, -0.02), r=0.05)
+    # ball1 = Ball(pos=(0.21, 0.2), vel=(0.04, 0.04), r=0.05)
+    # ball2 = Ball(pos=(0.8, 0.8), vel=(-0.02, -0.02), r=0.05)
 
-    lab = Lab([ball1, ball2], step=.1)
-    lab.run()
+    # lab = Lab([ball1, ball2], step=.1)
+    # lab.run()
+    # plt.show()
+    _balls = [Ball(
+                   pos=(0.2+(i%20)*0.03, 0.2+(i//20)*0.03),
+                   vel=(1 if i == 0 else 0, 0),
+                   r=0.01)
+        for i in range(400)]
+    lab = Lab(_balls, step=1e-2)
+    lab.run(frames=10000, interval=2)
     plt.show()
