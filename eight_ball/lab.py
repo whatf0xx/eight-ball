@@ -125,15 +125,13 @@ class Lab:
         """
         n = len(self.balls)
         for i in range(n-1):
-            soonest_collision = (float('inf'), None, None, None)
             for j in range(i, n):
                 collision = self.calculate_collision_event(i, j)
                 match collision:
                     case None:
                         pass
                     case collision:
-                        soonest_collision = min(soonest_collision, collision)
-            heapq.heappush(self.collision_queue, soonest_collision)
+                        heapq.heappush(self.collision_queue, collision)
 
     def calculate_collisions_for_ball(self, index: int):
         """
@@ -142,16 +140,13 @@ class Lab:
         """
         left = range(index)
         right = range(index+1, len(self.balls))
-        soonest_collision = (float('inf'), None, None, None)
         for j in chain(left, right):
             collision = self.calculate_collision_event(index, j)
             match collision:
                 case None:
                     pass
                 case collision:
-                    soonest_collision = min(soonest_collision, collision)
-
-        heapq.heappush(self.collision_queue, soonest_collision)
+                    heapq.heappush(self.collision_queue, collision)
 
     def get_next_collision(self) -> CollisionEvent:
         """
@@ -255,10 +250,10 @@ if __name__ == "__main__":
     # lab.run()
     # plt.show()
     _balls = [Ball(
-                   pos=(0.2+(i%20)*0.03, 0.2+(i//20)*0.03),
-                   vel=(1 if i == 0 else 0, 0),
-                   r=0.01)
-        for i in range(400)]
+                   pos=(0.2+(i%40)*0.015, 0.2+(i//40)*0.015),
+                   vel=(4 if i == 0 else 0, 3 if i == 0 else 0),
+                   r=0.003)
+        for i in range(1600)]
     lab = Lab(_balls, step=1e-2)
-    lab.run(frames=10000, interval=2)
+    lab.run(frames=100000, interval=2)
     plt.show()
