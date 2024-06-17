@@ -215,7 +215,7 @@ class Lab:
         """
         time, i, j, _ = self.next_collision  # don't need to check pair_hash
         delta_t = time - self.global_time
-        assert delta_t > 0, f"Collision took place in the past!?\n{time=};\t{self.global_time=}"
+        assert delta_t >= 0, f"Collision took place in the past!?\n{time=};\t{self.global_time=}"
         for ball in self.balls:
             ball.step(delta_t)
         self.global_time = time
@@ -259,6 +259,6 @@ if __name__ == "__main__":
                    vel=(1 if i == 0 else 0, 0),
                    r=0.01)
         for i in range(400)]
-    lab = Lab(_balls, step=97e-3)
+    lab = Lab(_balls, step=1e-2)
     lab.run(frames=10000, interval=2)
     plt.show()
