@@ -1,2 +1,2 @@
-matplotlib                3.9.0
-maturin                   1.5.1
+matplotlib==3.9.0
+maturin==1.5.1
