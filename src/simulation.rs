@@ -6,14 +6,17 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
 struct CollisionEvent {
-    // We add the field `v_dot_prod` so that we can keep track of whether or not this collision
-    // is still relevant to the colliding balls; if either has experienced a collision since,
-    // then its trajectory will be changed, and comparing the new value of `v_dot_prod` with the
-    // stored one will return inequality.
+    // Struct which identifies a collision between two `Ball`s within a `Simulation`.
+    // The indices (`i`, `j`) of each `Ball` within the associated `Simulation`'s
+    // `balls` `Vec` are stored, along with the time `t` at which the collision occurs.
+    // Finally, the velocities of the `Ball`s at the time the collision event is
+    // registered is stored (`old_vels`) so that when the `CollisionEvent` is popped
+    // from the `collisions` queue it can be verified that the `Ball`s have not
+    // collided or changed velocity since.
     i: usize,
     j: usize,
     t: f64,
-    pair_hash: f64,
+    old_vels: f64,
 }
 
 impl PartialEq for CollisionEvent {
@@ -36,10 +39,10 @@ impl Ord for CollisionEvent {
     }
 }
 
-#[pyclass(subclass)]
-#[pyo3(name = "_Simulation")]
+// #[pyclass(subclass)]
+// #[pyo3(name = "_Simulation")]
 pub struct Simulation {
-    #[pyo3(get)]
+    // #[pyo3(get)]
     global_time: f64,
     balls: Vec<Ball>,
     collisions: BinaryHeap<Reverse<CollisionEvent>>,
@@ -105,7 +108,7 @@ impl Simulation {
                     i,
                     j,
                     t,
-                    pair_hash: v_dot_prod,
+                    old_vels: v_dot_prod,
                 }))
             }
         }
@@ -145,7 +148,7 @@ impl Simulation {
                 i: ball_index,
                 j,
                 t: min_time,
-                pair_hash: v_dot_prod,
+                old_vels: v_dot_prod,
             }));
         }
     }
@@ -180,7 +183,7 @@ impl Simulation {
         if let Some(reverse_collision) = self.collisions.pop() {
             let col = reverse_collision.0; // this line just gets rid of the Reverse()
             let (p, q, v_dot_prod, t) =
-                (&self.balls[col.i], &self.balls[col.j], col.pair_hash, col.t);
+                (&self.balls[col.i], &self.balls[col.j], col.old_vels, col.t);
             let calc_dot_prod = p.vel().dot(q.vel());
             if approx_eq_f64(calc_dot_prod, v_dot_prod, 1) {
                 // This executes if the `CollisionEvent` is valid, i.e. the `Ball`s involved

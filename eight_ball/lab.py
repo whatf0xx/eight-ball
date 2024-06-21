@@ -250,10 +250,10 @@ if __name__ == "__main__":
     # lab.run()
     # plt.show()
     _balls = [Ball(
-                   pos=(0.2+(i%40)*0.015, 0.2+(i//40)*0.015),
+                   pos=(0.2+(i%20)*0.03, 0.2+(i//20)*0.03),
                    vel=(4 if i == 0 else 0, 3 if i == 0 else 0),
-                   r=0.003)
-        for i in range(1600)]
+                   r=0.005)
+        for i in range(400)]
     lab = Lab(_balls, step=1e-2)
     lab.run(frames=100000, interval=2)
     plt.show()
