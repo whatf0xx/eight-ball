@@ -21,6 +21,12 @@ impl From<(f64, f64)> for FloatVec {
     }
 }
 
+impl PartialEq for FloatVec {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
 impl ops::Add<FloatVec> for FloatVec {
     type Output = FloatVec;
 

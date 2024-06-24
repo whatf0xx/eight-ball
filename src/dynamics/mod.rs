@@ -13,6 +13,7 @@ pub enum DynamicsError {
     StationaryCollision,
     PointParticleCollision,
     IntersectingParticles,
+    SimulationFailure,
 }
 
 #[pymethods]
