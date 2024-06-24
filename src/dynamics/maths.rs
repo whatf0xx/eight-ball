@@ -84,6 +84,10 @@ impl FloatVec {
         FloatVec { x, y }
     }
 
+    pub fn origin() -> FloatVec {
+        FloatVec { x: 0.0, y: 0.0 }
+    }
+
     pub fn dot(&self, other: &FloatVec) -> f64 {
         self.x * other.x + self.y * other.y
     }

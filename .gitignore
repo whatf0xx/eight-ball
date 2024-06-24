@@ -11,6 +11,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 .venv/
+.env[0-9]*/
 env/
 bin/
 build/
@@ -73,3 +74,10 @@ docs/_build/
 
 # .ipynb checkpoints
 eight_ball/.ipynb_checkpoints
+.ipynb_checkpoints/
+
+# shell scripts
+*.sh
+
+# PyLint
+.pylintrc
