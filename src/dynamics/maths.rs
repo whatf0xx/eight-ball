@@ -8,7 +8,7 @@ pub fn approx_eq_f64(a: f64, b: f64, ulp: u64) -> bool {
     diff <= ulp
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct FloatVec {
     pub x: f64,
     pub y: f64,

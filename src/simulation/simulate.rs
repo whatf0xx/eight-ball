@@ -1,70 +1,44 @@
 use crate::dynamics::ball::{Ball, Container};
 use crate::dynamics::collide::Collide;
-use crate::dynamics::maths::{approx_eq_f64, FloatVec};
+use crate::dynamics::maths::FloatVec;
 use crate::dynamics::DynamicsError;
+use crate::simulation::collision::{CollisionEvent, CollisionPartner};
 use itertools::Itertools;
-// use pyo3::prelude::*;
+use pyo3::prelude::*;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
-#[derive(Clone, Copy)]
-enum CollisionPartner {
-    Ball(usize),
-    Container,
+struct Params {
+    delta: f64,
 }
 
-struct CollisionEvent {
-    // Struct which identifies a collision between two `Ball`s within a `Simulation`.
-    // The indices (`i`, `j`) of each `Ball` within the associated `Simulation`'s
-    // `balls` `Vec` are stored, along with the time `t` at which the collision occurs.
-    // A value for `j` of self.balls.len() indicates a collision with the container.
-    // Finally, the velocities of the `Ball`s at the time the collision event is
-    // registered is stored (`old_vels`) so that when the `CollisionEvent` is popped
-    // from the `collisions` queue it can be verified that the `Ball`s have not
-    // collided or changed velocity since.
-    i: usize,
-    j: CollisionPartner,
-    t: f64,
-    old_vels: (FloatVec, FloatVec),
-}
-
-impl PartialEq for CollisionEvent {
-    fn eq(&self, other: &Self) -> bool {
-        approx_eq_f64(self.t, other.t, 1)
-    }
-}
-
-impl Eq for CollisionEvent {}
-
-impl PartialOrd for CollisionEvent {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for CollisionEvent {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.t.total_cmp(&other.t)
-    }
-}
-
-impl Into<(usize, CollisionPartner, f64, (FloatVec, FloatVec))> for CollisionEvent {
-    fn into(self) -> (usize, CollisionPartner, f64, (FloatVec, FloatVec)) {
-        (self.i, self.j, self.t, self.old_vels)
-    }
-}
-
-// #[pyclass(subclass)]
-// #[pyo3(name = "_Simulation")]
+#[pyclass(subclass)]
+#[pyo3(name = "_Simulation")]
 pub struct Simulation {
-    // #[pyo3(get)]
-    global_time: f64,
-    container: Container,
-    balls: Vec<Ball>,
-    collisions: BinaryHeap<Reverse<CollisionEvent>>,
+    #[pyo3(get)]
+    pub(crate) global_time: f64,
+    params: Params,
+    pub(crate) container: Container,
+    pub(crate) balls: Vec<Ball>,
+    pub(crate) collisions: BinaryHeap<Reverse<CollisionEvent>>,
 }
 
 impl Simulation {
+    pub fn new(radius: f64) -> Simulation {
+        let global_time = 0f64;
+        let container = Container::new(radius);
+        let balls = Vec::new();
+        let collisions = BinaryHeap::new();
+        let params = Params { delta: 1e-6 };
+        Simulation {
+            global_time,
+            params,
+            container,
+            balls,
+            collisions,
+        }
+    }
+
     fn calculate_collision_event(&self, i: usize, j: usize) -> Option<CollisionEvent> {
         // Given two `Ball`s of the simulation at indices `i` and `j` of `balls`,
         // calculate the `CollisionEvent` between them, or return `None` if no
@@ -74,7 +48,7 @@ impl Simulation {
         let t = self.global_time + time_to_collision_relative;
         let old_vels = (p.vel().to_owned(), q.vel().to_owned());
         let j = CollisionPartner::Ball(j);
-        Some(CollisionEvent { i, j, t, old_vels })
+        Some(CollisionEvent::new(i, j, t, old_vels))
     }
 
     fn calculate_container_collision(&self, i: usize) -> Option<CollisionEvent> {
@@ -84,10 +58,10 @@ impl Simulation {
         let t = self.global_time + time_to_collision_relative;
         let old_vels = (ball.vel().to_owned(), FloatVec::origin());
         let j = CollisionPartner::Container;
-        Some(CollisionEvent { i, j, t, old_vels })
+        Some(CollisionEvent::new(i, j, t, old_vels))
     }
 
-    fn generate_collision_queue(&mut self) {
+    pub(crate) fn generate_collision_queue(&mut self) {
         // Given a set of balls, calculate the order in which they will collide, assuming that
         // all their velocities remain constant. Store the collisions in a priority queue,
         // `self.collisions` so that the collisions can be efficiently looked up as the
@@ -102,7 +76,7 @@ impl Simulation {
         }
     }
 
-    fn generate_container_collisions(&mut self) {
+    pub(crate) fn generate_container_collisions(&mut self) {
         // Given a set of balls within a container, calculate the collisions of the balls
         // with the container, and push them in order to a collision queue.
         let n = self.balls.len();
@@ -139,7 +113,7 @@ impl Simulation {
     pub fn step(&mut self, t: f64) {
         // Move the simulation forward in time by `t` seconds.
         for ball in self.balls.iter_mut() {
-            ball.step(t)
+            ball.step(t * (1. - self.params.delta))
         }
         self.global_time += t;
     }
@@ -208,7 +182,7 @@ impl Simulation {
         }; // Just comparing 0f == 0f?
         let curr_vels = (p.vel, q_vel);
         if curr_vels == old_vels {
-            Some(CollisionEvent { i, j, t, old_vels })
+            Some(CollisionEvent::new(i, j, t, old_vels))
         } else {
             None
         }
@@ -223,7 +197,7 @@ impl Simulation {
         collision_event.ok_or(DynamicsError::SimulationFailure)
     }
 
-    fn step_through_collision(&mut self) -> Result<(), DynamicsError> {
+    pub(crate) fn step_through_collision(&mut self) -> Result<(), DynamicsError> {
         // Run the simulation to and including the next collision that is scheduled
         // to occur. Calculate the dynamics of the collision and update the
         // collisions queue accordingly.

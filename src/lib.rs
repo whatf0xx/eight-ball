@@ -1,12 +1,12 @@
 use pyo3::prelude::*;
-// use simulation::Simulation;
 mod dynamics;
-mod simulation;
 use dynamics::ball::Ball;
+mod simulation;
+use simulation::simulate::Simulation;
 
 #[pymodule]
 fn eight_ball(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Ball>()?;
-    // m.add_class::<Simulation>()?;
+    m.add_class::<Simulation>()?;
     Ok(())
 }

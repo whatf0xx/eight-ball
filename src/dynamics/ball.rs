@@ -52,3 +52,9 @@ impl Ball {
 pub struct Container {
     pub(crate) r: f64,
 }
+
+impl Container {
+    pub fn new(r: f64) -> Container {
+        Container { r }
+    }
+}
