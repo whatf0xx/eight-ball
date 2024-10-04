@@ -70,11 +70,11 @@ class Lab:
     def __init__(self, balls=None, step=1e-2, **kwargs):
         self.container = Container(r=0.5)
         self.drawer = LabDrawer(**kwargs)
-        self.drawer.add(self.container.patch)
         self.balls = []
         if balls is not None:
             self.add_balls(balls)
 
+        self.drawer.add(self.container.patch)
         self.step = step
         self.global_time = 0.
 
@@ -209,12 +209,20 @@ class Lab:
     def collide_update_queue(self, i, j):
         """
         Perform a collision between `self.balls` `i` and `j` and calculate
-        the next collisions for each of them. As all collisions are now
-        handled by the same Rust API, we don't need to distinguish them.
+        the next collisions for each of them. Carefully handle the case of
+        either being the container, separately.
         """
-        self.balls[i].collide(self.balls[j])
-        self.calculate_collisions_for_ball(i)
-        self.calculate_collisions_for_ball(j)
+        n = len(self.balls)
+        if i == n:  # corresponds to `i` is the container
+            self.balls[j].container_collide(self.container)
+            self.calculate_collisions_for_ball(j)
+        elif j == n:  # `j` is the container
+            self.balls[i].container_collide(self.container)
+            self.calculate_collisions_for_ball(i)
+        else:
+            self.balls[i].collide(self.balls[j])
+            self.calculate_collisions_for_ball(i)
+            self.calculate_collisions_for_ball(j)
 
     def step_to_next_collision(self):
         """
