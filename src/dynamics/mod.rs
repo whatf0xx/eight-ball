@@ -5,7 +5,7 @@ mod centre;
 pub mod collide;
 pub mod maths;
 
-use ball::Ball;
+use ball::{Ball, Container};
 use collide::Collide;
 use maths::FloatVec;
 
@@ -89,6 +89,15 @@ impl Ball {
 
     fn v_squared(&self) -> f64 {
         self.vel.dot(&self.vel)
+    }
+}
+
+#[pymethods]
+impl Container {
+    #[new]
+    #[pyo3(signature = (r=100f64))]
+    fn py_new(r: f64) -> Self {
+        Self::new(r)
     }
 }
 

@@ -68,10 +68,10 @@ class Lab:
     `Simulation` class, which handles the book-keeping wholly in Rust.
     """
     def __init__(self, balls=None, step=1e-2, **kwargs):
-        container = Container(pos=(0.5, 0.5), vel=(0., 0.), r=-0.5)
-        self.balls = [container]
+        self.container = Container(r=0.5)
         self.drawer = LabDrawer(**kwargs)
-        self.drawer.add(container.patch)
+        self.drawer.add(self.container.patch)
+        self.balls = []
         if balls is not None:
             self.add_balls(balls)
 
@@ -102,11 +102,15 @@ class Lab:
 
     def calculate_collision_event(self, i: int, j: int) -> CollisionEvent | None:
         """
-        Given the indices of two `Ball`s in the lab, return the collision between
-        them as a `CollisionEvent` tuple. If no collision exists, return `None`.
+        Given the indices of two `Ball`s in the lab, return the collision
+        between them as a `CollisionEvent` tuple. If no collision exists, return
+        `None`. The container should only turn up in the second index. In this
+        case, it will correspond to `j=n`, `n` being the length of the array, in
+        which case the container is used, instead.
         """
         ball = self.balls[i]
-        other = self.balls[j]
+        n = len(self.balls)
+        other = self.balls[j] if j != n else self.container
 
         collision_time = ball.time_to_collision(other)
         match collision_time:
@@ -126,27 +130,36 @@ class Lab:
         n = len(self.balls)
         for i in range(n-1):
             for j in range(i, n):
-                collision = self.calculate_collision_event(i, j)
-                match collision:
-                    case None:
-                        pass
-                    case collision:
-                        heapq.heappush(self.collision_queue, collision)
+                maybe_collision = self.calculate_collision_event(i, j)
+                self._push_collision_or_pass(maybe_collision)
+
+            maybe_collision = self.calculate_collision_event(i, n)
+            self._push_collision_or_pass(maybe_collision)
+
+        maybe_collision = self.calculate_collision_event(n-1, n)
+        self._push_collision_or_pass(maybe_collision)
+
+    def _push_collision_or_pass(self, maybe_collision):
+        match maybe_collision:
+            case None:
+                pass
+            case collision:
+                heapq.heappush(self.collision_queue, collision)
 
     def calculate_collisions_for_ball(self, index: int):
         """
         For the `Ball` at index `index`, calculate the next collision between it
         and the rest of the lab and then push the collision to the queue.
         """
+        n = len(self.balls)
         left = range(index)
-        right = range(index+1, len(self.balls))
+        right = range(index+1, n)
         for j in chain(left, right):
-            collision = self.calculate_collision_event(index, j)
-            match collision:
-                case None:
-                    pass
-                case collision:
-                    heapq.heappush(self.collision_queue, collision)
+            maybe_collision = self.calculate_collision_event(index, j)
+            self._push_collision_or_pass(maybe_collision)
+
+        maybe_collision = self.calculate_collision_event(index, n)
+        self._push_collision_or_pass(maybe_collision)
 
     def get_next_collision(self) -> CollisionEvent:
         """
@@ -187,19 +200,12 @@ class Lab:
     def collide_update_queue(self, i, j):
         """
         Perform a collision between `self.balls` `i` and `j` and calculate
-        the next collisions for each of them. Carefully handle the case of
-        either being the container, separately.
+        the next collisions for each of them. As all collisions are now
+        handled by the same Rust API, we don't need to distinguish them.
         """
-        if i == 0:  # corresponds to `i` is the container
-            self.balls[j].container_collide(self.balls[i])
-            self.calculate_collisions_for_ball(j)
-        elif j == 0:  # `j` is the container
-            self.balls[i].container_collide(self.balls[j])
-            self.calculate_collisions_for_ball(i)
-        else:
-            self.balls[i].collide(self.balls[j])
-            self.calculate_collisions_for_ball(i)
-            self.calculate_collisions_for_ball(j)
+        self.balls[i].collide(self.balls[j])
+        self.calculate_collisions_for_ball(i)
+        self.calculate_collisions_for_ball(j)
 
     def step_to_next_collision(self):
         """

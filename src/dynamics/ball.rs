@@ -49,7 +49,10 @@ impl Ball {
     }
 }
 
+#[pyclass(subclass)]
+#[pyo3(name = "_Container")]
 pub struct Container {
+    #[pyo3(get, set)]
     pub(crate) r: f64,
 }
 

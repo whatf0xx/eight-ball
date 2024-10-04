@@ -1,6 +1,6 @@
 from typing import Tuple
 from matplotlib import patches
-from eight_ball import _Ball
+from eight_ball import _Ball, _Container
 
 
 class Ball(_Ball):
@@ -15,10 +15,10 @@ class Ball(_Ball):
         return self.vel, other.vel
 
 
-class Container(Ball):
+class Container(_Container):
     @property
     def patch(self) -> patches.Circle:
-        return patches.Circle(self.pos,
+        return patches.Circle((0., 0.),
                               radius=-self.r,
                               facecolor="white",
                               edgecolor="black",
