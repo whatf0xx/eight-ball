@@ -14,12 +14,15 @@ class Ball(_Ball):
     def pair_hash(self, other) -> Tuple[Tuple[float, float], Tuple[float, float]]:
         return self.vel, other.vel
 
+    def container_hash(self) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        return self.vel, (0., 0.)
+
 
 class Container(_Container):
     @property
     def patch(self) -> patches.Circle:
         return patches.Circle((0., 0.),
-                              radius=-self.r,
+                              radius=self.r,
                               facecolor="white",
                               edgecolor="black",
                               zorder=0)

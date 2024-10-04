@@ -60,6 +60,14 @@ impl Ball {
         })
     }
 
+    #[pyo3(name = "time_to_container_collision")]
+    fn py_time_to_container_collision(&self, other: Py<Container>) -> Option<f64> {
+        Python::with_gil(|py| {
+            let other = other.borrow(py);
+            self.time_to_collision(&*other)
+        })
+    }
+
     #[pyo3(name = "collide")]
     fn py_collide(&mut self, other: Py<Ball>) -> PyResult<()> {
         Python::with_gil(|py| {
@@ -70,7 +78,7 @@ impl Ball {
     }
 
     #[pyo3(name = "container_collide")]
-    fn py_container_colllide(&mut self, container: Py<Ball>) -> PyResult<()> {
+    fn py_container_colllide(&mut self, container: Py<Container>) -> PyResult<()> {
         Python::with_gil(|py| {
             let mut container = container.borrow_mut(py);
             self.collide(&mut *container)

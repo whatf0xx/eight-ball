@@ -110,14 +110,19 @@ class Lab:
         """
         ball = self.balls[i]
         n = len(self.balls)
-        other = self.balls[j] if j != n else self.container
+        if j == n:
+            # this is the container
+            collision_time = ball.time_to_container_collision(self.container)
+            pair_hash = ball.container_hash()
+        else:
+            other = self.balls[j]
+            collision_time = ball.time_to_collision(other)
+            pair_hash = ball.pair_hash(other)
 
-        collision_time = ball.time_to_collision(other)
         match collision_time:
             case None:
                 return None
             case collision_time:
-                pair_hash = ball.pair_hash(other)
                 return (collision_time + self.global_time, i, j, pair_hash)
 
     def calculate_collisions_global(self):
@@ -168,10 +173,14 @@ class Lab:
         when the time comes to execute the collision. So, the `pair_hash` is
         used to ensure that the velocities have not changed in the interim.
         """
+        n = len(self.balls)
         while True:
             potential_collision = heapq.heappop(self.collision_queue)
             i, j, pair_hash = potential_collision[1:]  # don't care about the time
-            local_hash = self.balls[i].pair_hash(self.balls[j])
+            if j == n:
+                local_hash = self.balls[i].container_hash()
+            else:
+                local_hash = self.balls[i].pair_hash(self.balls[j])
             if local_hash == pair_hash:
                 return potential_collision
 
