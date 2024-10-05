@@ -7,13 +7,14 @@ pub enum CollisionPartner {
 }
 
 pub struct CollisionEvent {
-    // Struct which identifies a collision between two `Ball`s within a `Simulation`.
-    // The indices (`i`, `j`) of each `Ball` within the associated `Simulation`'s
-    // `balls` `Vec` are stored, along with the time `t` at which the collision occurs.
-    // A value for `j` of self.balls.len() indicates a collision with the container.
-    // Finally, the velocities of the `Ball`s at the time the collision event is
-    // registered is stored (`old_vels`) so that when the `CollisionEvent` is popped
-    // from the `collisions` queue it can be verified that the `Ball`s have not
+    // Struct which identifies a collision between two `Ball`s within a
+    // `Simulation`. `i` gives the index of the first ball involved in the
+    // collision within the `Vec` of balls. `j` is an enum which can either
+    // indicate a collision with the container, or with another ball in
+    // the simulation, in which case the index is also stored. Finally, the
+    // velocities of the `Ball`s at the time the collision event is registered
+    // is stored (`old_vels`) so that when the `CollisionEvent` is popped from
+    // the `collisions` queue it can be verified that the `Ball`s have not
     // collided or changed velocity since.
     i: usize,
     j: CollisionPartner,
