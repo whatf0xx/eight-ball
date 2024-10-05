@@ -21,7 +21,7 @@ class Ball(_Ball):
 class Container(_Container):
     @property
     def patch(self) -> patches.Circle:
-        return patches.Circle((0.5, 0.5),
+        return patches.Circle((0., 0.),
                               radius=self.r,
                               facecolor="white",
                               edgecolor="black",

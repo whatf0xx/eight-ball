@@ -35,6 +35,8 @@ class LabDrawer:
         self.ball_patches = ball_patches if ball_patches is not None else []
         self.fig = plt.figure(**kwargs)
         self.ax = plt.axes(**kwargs)
+        self.ax.set_xlim(-1., 1.)
+        self.ax.set_ylim(-1., 1.)
         for patch in self.ball_patches:
             self.ax.add_patch(patch)
         self.ani = None
@@ -68,7 +70,7 @@ class Lab:
     `Simulation` class, which handles the book-keeping wholly in Rust.
     """
     def __init__(self, balls=None, step=1e-2, **kwargs):
-        self.container = Container(r=0.5)
+        self.container = Container(r=1)
         self.drawer = LabDrawer(**kwargs)
         self.balls = []
         if balls is not None:
@@ -266,16 +268,16 @@ class Lab:
 
 
 if __name__ == "__main__":
-    # ball1 = Ball(pos=(0.21, 0.2), vel=(0.04, 0.04), r=0.05)
-    # ball2 = Ball(pos=(0.8, 0.8), vel=(-0.02, -0.02), r=0.05)
+    # ball1 = Ball(pos=(-0.29, -0.3), vel=(0.04, 0.04), r=0.05)
+    # ball2 = Ball(pos=(0.3, 0.3), vel=(-0.02, -0.02), r=0.05)
 
     # lab = Lab([ball1, ball2], step=.1)
     # lab.run()
     # plt.show()
     _balls = [Ball(
-                   pos=(0.2+(i%20)*0.03, 0.2+(i//20)*0.03),
+                   pos=(-0.6+(i%20)*0.06, -0.6+(i//20)*0.06),
                    vel=(4 if i == 0 else 0, 3 if i == 0 else 0),
-                   r=0.005)
+                   r=0.01)
         for i in range(400)]
     lab = Lab(_balls, step=1e-2)
     lab.run(frames=100000, interval=2)

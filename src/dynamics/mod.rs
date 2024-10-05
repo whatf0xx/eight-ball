@@ -19,7 +19,7 @@ pub enum DynamicsError {
 #[pymethods]
 impl Ball {
     #[new]
-    #[pyo3(signature = (pos=(0f64, 0f64), vel=(0f64, 0f64), r=1f64))]
+    #[pyo3(signature = (pos=(0f64, 0f64), vel=(0f64, 0f64), r=0.01f64))]
     fn py_new(pos: (f64, f64), vel: (f64, f64), r: f64) -> Self {
         Self::new(pos.into(), vel.into(), r)
     }
@@ -103,7 +103,7 @@ impl Ball {
 #[pymethods]
 impl Container {
     #[new]
-    #[pyo3(signature = (r=100f64))]
+    #[pyo3(signature = (r=1f64))]
     fn py_new(r: f64) -> Self {
         Self::new(r)
     }
