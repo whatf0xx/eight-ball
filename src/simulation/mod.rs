@@ -1,6 +1,7 @@
 use crate::dynamics::ball::Ball;
 use pyo3::{exceptions::PyValueError, prelude::*};
 mod collision;
+mod histogram;
 pub mod simulate;
 use simulate::Simulation;
 
