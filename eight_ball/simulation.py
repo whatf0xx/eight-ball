@@ -30,13 +30,13 @@ class Simulation(_Simulation):
 if __name__ == "__main__":
     sim = Simulation(1.0)
     _balls = [Ball(
-                   pos=(0.2+(i%2)*0.3, 0.2+(i//2)*0.3),
-                   vel=(.4 if i == 0 else 0, .3 if i == 0 else 0),
-                   r=0.05)
-        for i in range(4)]
+                   pos=(-0.6+(i%20)*0.06, -0.6+(i//20)*0.06),
+                   vel=(4 if i == 0 else 0, 3 if i == 0 else 0),
+                   r=0.01)
+        for i in range(400)]
     sim.add_balls(_balls)
     sim.initialise()
-    times_dist = sim.collision_times(2_226_700, 0., 7., 1400)
+    times_dist = sim.collision_times(3_000_000, 0., 0.3, 1500)
     with open("data/collision_time.pkl", "wb+") as f:
         dump(times_dist, f)
     fig = plt.figure()
