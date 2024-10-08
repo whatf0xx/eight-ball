@@ -60,18 +60,20 @@ impl Simulation {
         let (tx_raw, rx_raw) = mpsc::channel();
         let mut current_time = 0f64;
 
+        println!("Calculating collisions...");
         for _ in tqdm(0..no_collisions) {
             self.py_next_collision()?;
             let collision_delta_t = self.global_time - current_time;
             current_time = self.global_time;
             tx_raw.send(collision_delta_t).unwrap();
         }
+        // drop the tx_raw to cause the channel to hang up
+        drop(tx_raw);
 
         let (tx_hist, rx_hist) = mpsc::channel();
         thread::spawn(move || {
             let data = Box::new(rx_raw.into_iter());
             let hist = Histogram::bin(left, right, bins, data);
-            println!("Actually returned from the binning function!");
             tx_hist.send(hist).unwrap();
         });
 

@@ -27,17 +27,6 @@ class Simulation(_Simulation):
 
 
 if __name__ == "__main__":
-    # %% Comic strip demo:
-    # sim = Simulation(1.0)
-    # _balls = [Ball(
-    #                pos=(0.2+(i%2)*0.3, 0.2+(i//2)*0.3),
-    #                vel=(.4 if i == 0 else 0, .3 if i == 0 else 0),
-    #                r=0.05)
-    #     for i in range(4)]
-    # sim.add_balls(_balls)
-    # sim.initialise()
-    # sim.comic_strip(9)
-    # %% Histogram demo:
     sim = Simulation(1.0)
     _balls = [Ball(
                    pos=(0.2+(i%2)*0.3, 0.2+(i//2)*0.3),
@@ -46,8 +35,8 @@ if __name__ == "__main__":
         for i in range(4)]
     sim.add_balls(_balls)
     sim.initialise()
-    times_dist = sim.collision_times(10_000, 0., 0.1, 100)
+    times_dist = sim.collision_times(3_000_000, 0., 7., 1400)
     fig = plt.figure()
     ax = plt.axes()
     ax.bar(times_dist["centres"], times_dist["counts"], times_dist["width"])
-    fig.show()
+    plt.show()

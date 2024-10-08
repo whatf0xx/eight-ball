@@ -7,7 +7,7 @@ pub struct Histogram {
 
 impl Histogram {
     pub fn bin(left: f64, right: f64, bins: usize, data: Box<dyn Iterator<Item = f64>>) -> Self {
-        let width = right - left / (bins as f64);
+        let width = (right - left) / (bins as f64);
         let mut counts = vec![0; bins];
         data.into_iter()
             .map(|val| val - left)
@@ -39,7 +39,7 @@ impl Histogram {
     }
 
     pub fn width(&self) -> f64 {
-        self.right - self.left / (self.bins as f64)
+        (self.right - self.left) / (self.bins as f64)
     }
 
     pub fn counts(&self) -> Vec<usize> {
