@@ -86,15 +86,6 @@ impl Simulation {
             ]
         });
 
-        let mut index = 0;
-        let mut max_count = 0;
-        for (i, count) in hist.counts().into_iter().enumerate() {
-            if count > max_count {
-                index = i;
-                max_count = count;
-            }
-        }
-        println!("index: {}, max_count: {}", index, max_count);
         let dict_map: HashMap<String, PyObject> = dict_elements.into_iter().collect();
         Ok(dict_map)
     }

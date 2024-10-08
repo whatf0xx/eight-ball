@@ -16,7 +16,7 @@ class Simulation(_Simulation):
         width = floor_sqrt(collisions)
         height = ceildiv(collisions, width)
         _, axs = plt.subplots(height, width)
-        draw(axs[0][0], self.get_balls(), self.container_radius, 0.)
+        draw(axs[0][0], self.get_balls(), self.container_radius, self.global_time)
         for c in range(1, collisions):
             self.next_collision()
             i = c // width
@@ -36,10 +36,11 @@ if __name__ == "__main__":
         for i in range(4)]
     sim.add_balls(_balls)
     sim.initialise()
-    times_dist = sim.collision_times(10_000_000, 0., 7., 1400)
+    times_dist = sim.collision_times(2_226_700, 0., 7., 1400)
     with open("data/collision_time.pkl", "wb+") as f:
         dump(times_dist, f)
     fig = plt.figure()
     ax = plt.axes()
     ax.bar(times_dist["centres"], times_dist["counts"], times_dist["width"])
-    plt.show()
+
+    sim.comic_strip(9)
