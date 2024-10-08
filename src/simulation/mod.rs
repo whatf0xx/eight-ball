@@ -89,4 +89,38 @@ impl Simulation {
         let dict_map: HashMap<String, PyObject> = dict_elements.into_iter().collect();
         Ok(dict_map)
     }
+
+    /// Run the simulation and track the positions of the balls. Panic in the
+    /// secondary thread when a ball ends up outside the container and give the
+    /// collision number and the global time at which it happened.
+    fn track_positions(&mut self, no_collisions: usize) -> PyResult<()> {
+        let (tx, rx) = mpsc::channel();
+
+        println!("Calculating collisions...");
+        for i in tqdm(0..no_collisions) {
+            self.py_next_collision()?;
+            let r_squareds: Vec<f64> = self
+                .balls
+                .iter()
+                .map(|ball| ball.pos().dot(ball.pos()))
+                .collect();
+            let global_time = self.global_time;
+            tx.send((i, global_time, r_squareds)).unwrap();
+        }
+        // drop the tx_raw to cause the channel to hang up
+        drop(tx);
+
+        thread::spawn(move || {
+            for info in rx {
+                let (i, global_time, r_squareds) = info;
+                for r_squared in r_squareds {
+                    if r_squared > 1f64 {
+                        panic!("Collision: {};\tGlobal time: {}", i, global_time);
+                    }
+                }
+            }
+        });
+
+        Ok(())
+    }
 }

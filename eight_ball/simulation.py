@@ -36,11 +36,12 @@ if __name__ == "__main__":
         for i in range(400)]
     sim.add_balls(_balls)
     sim.initialise()
-    times_dist = sim.collision_times(3_000_000, 0., 0.3, 1500)
-    with open("data/collision_time.pkl", "wb+") as f:
-        dump(times_dist, f)
-    fig = plt.figure()
-    ax = plt.axes()
-    ax.bar(times_dist["centres"], times_dist["counts"], times_dist["width"])
+    sim.track_positions(3_000_000)
+    # times_dist = sim.collision_times(3_000_000, 0., 0.3, 1500)
+    # with open("data/collision_time.pkl", "wb+") as f:
+    #     dump(times_dist, f)
+    # fig = plt.figure()
+    # ax = plt.axes()
+    # ax.bar(times_dist["centres"], times_dist["counts"], times_dist["width"])
 
-    sim.comic_strip(9)
+    # sim.comic_strip(9)
