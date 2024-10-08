@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from eight_ball import _Simulation
 from eight_ball.ball import Ball
 from eight_ball.prelude import draw, floor_sqrt, ceildiv
+from pickle import dump
 
 class Simulation(_Simulation):
     def __init__(self, radius: float):
@@ -35,7 +36,9 @@ if __name__ == "__main__":
         for i in range(4)]
     sim.add_balls(_balls)
     sim.initialise()
-    times_dist = sim.collision_times(3_000_000, 0., 7., 1400)
+    times_dist = sim.collision_times(10_000_000, 0., 7., 1400)
+    with open("data/collision_time.pkl", "wb+") as f:
+        dump(times_dist, f)
     fig = plt.figure()
     ax = plt.axes()
     ax.bar(times_dist["centres"], times_dist["counts"], times_dist["width"])

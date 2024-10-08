@@ -81,3 +81,6 @@ eight_ball/.ipynb_checkpoints
 
 # PyLint
 .pylintrc
+
+# data files we don't want to save
+data/
