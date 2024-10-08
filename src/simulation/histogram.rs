@@ -1,81 +1,48 @@
-pub struct Histogram<T> {
-    bin_edges: BinEdges<T>,
+pub struct Histogram {
+    left: f64,
+    right: f64,
+    bins: usize,
     counts: Vec<usize>,
 }
 
-impl<T> Histogram<T> {
-    pub fn from(bin_edges: &BinEdges<T>, counts: &[usize]) -> Self {
-        let bin_edges = bin_edges.clone();
-        let counts = Vec::from(counts);
-        Histogram { bin_edges, counts }
-    }
-}
+impl Histogram {
+    pub fn bin(left: f64, right: f64, bins: usize, data: Box<dyn Iterator<Item = f64>>) -> Self {
+        let width = right - left / (bins as f64);
+        let mut counts = vec![0; bins];
+        data.into_iter()
+            .map(|val| val - left)
+            .filter(|&val| val >= 0f64 && val < (right - left))
+            .map(|val| val / width)
+            .map(|val| val as usize) // watch out for failure here
+            .for_each(|i| counts[i] += 1);
 
-#[derive(Clone, Copy)]
-pub struct BinEdges<T> {
-    left: T,
-    right: T,
-    number: usize,
-    width: T,
-}
-
-impl BinEdges<f64> {
-    pub fn new(left: f64, right: f64, number: usize) -> Self {
-        let width = (right - left) / (number as f64);
-        BinEdges {
+        Histogram {
             left,
             right,
-            number,
-            width,
+            bins,
+            counts,
         }
     }
 
     pub fn edges(&self) -> Vec<f64> {
-        (0..self.number)
-            .map(|i| self.left + (i as f64) * self.width)
+        let width = self.width();
+        (0..=self.bins)
+            .map(|i| self.left + (i as f64) * width)
             .collect()
     }
-}
 
-pub trait Bin<T> {
-    /// Bin the data contained within `self` based on a passed slice of bin
-    /// edges. the data falls entirely within the given bin edges, and the
-    /// `bin_edges` array should capture the left- AND right-most edge of the
-    /// bins. As such, the output array should have one element fewer than
-    /// `bin_edges`.
-    fn bin(self, bin_edges: &BinEdges<T>) -> Vec<usize>;
-    // TODO: also add the ability to add data to an existing histogram:
-    // fn bin_into<T>(&self, histogram: Histogram<T>);
-}
-
-impl Bin<f64> for &[f64] {
-    fn bin(self, bin_edges: &BinEdges<f64>) -> Vec<usize> {
-        let left = bin_edges.left;
-        let right = bin_edges.right;
-        let width = bin_edges.width;
-        let mut counts = vec![0; bin_edges.number];
-        self.iter()
-            .map(|val| val - left)
-            .filter(|&val| val >= 0f64 && val < (right - left))
-            .map(|val| val / width)
-            .map(|val| val as usize) // watch out for failure here
-            .for_each(|i| counts[i] += 1);
-        counts
+    pub fn centres(&self) -> Vec<f64> {
+        let width = self.width();
+        (0..self.bins)
+            .map(|i| self.left + (i as f64 + 0.5) * width)
+            .collect()
     }
-}
 
-impl Bin<f64> for Box<dyn Iterator<Item = f64>> {
-    fn bin(self, bin_edges: &BinEdges<f64>) -> Vec<usize> {
-        let left = bin_edges.left;
-        let right = bin_edges.right;
-        let width = bin_edges.width;
-        let mut counts = vec![0; bin_edges.number];
-        self.into_iter()
-            .map(|val| val - left)
-            .filter(|&val| val >= 0f64 && val < (right - left))
-            .map(|val| val / width)
-            .map(|val| val as usize) // watch out for failure here
-            .for_each(|i| counts[i] += 1);
-        counts
+    pub fn width(&self) -> f64 {
+        self.right - self.left / (self.bins as f64)
+    }
+
+    pub fn counts(&self) -> Vec<usize> {
+        self.counts.to_owned()
     }
 }

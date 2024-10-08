@@ -11,3 +11,4 @@ crate-type = ["cdylib"]
 [dependencies]
 itertools = "0.12.1"
 pyo3 = "0.21.2"
+tqdm = "0.7.0"
