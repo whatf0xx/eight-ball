@@ -110,7 +110,7 @@ impl Simulation {
         // drop the tx_raw to cause the channel to hang up
         drop(tx);
 
-        thread::spawn(move || {
+        let checker = thread::spawn(move || {
             for info in rx {
                 let (i, global_time, r_squareds) = info;
                 for r_squared in r_squareds {
@@ -120,6 +120,8 @@ impl Simulation {
                 }
             }
         });
+
+        checker.join().unwrap();
 
         Ok(())
     }

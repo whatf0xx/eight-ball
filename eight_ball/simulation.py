@@ -30,18 +30,21 @@ class Simulation(_Simulation):
 if __name__ == "__main__":
     sim = Simulation(1.0)
     _balls = [Ball(
-                   pos=(-0.6+(i%20)*0.06, -0.6+(i//20)*0.06),
-                   vel=(4 if i == 0 else 0, 3 if i == 0 else 0),
-                   r=0.01)
-        for i in range(400)]
+                 pos=(-0.6+(i%40)*0.03, -0.6+(i//40)*0.03),
+                 vel=(4 if i == 0 else 0, 3 if i == 0 else 0),
+                 r=0.001)
+            for i in range(1600)]
     sim.add_balls(_balls)
     sim.initialise()
-    sim.track_positions(3_000_000)
-    # times_dist = sim.collision_times(3_000_000, 0., 0.3, 1500)
-    # with open("data/collision_time.pkl", "wb+") as f:
-    #     dump(times_dist, f)
-    # fig = plt.figure()
-    # ax = plt.axes()
-    # ax.bar(times_dist["centres"], times_dist["counts"], times_dist["width"])
+    # sim.comic_strip(4)
+    for _ in range(100_000):
+        sim.next_collision()
+    times_dist = sim.collision_times(1_000_000, 0., 0.03, 6000)
+    with open("data/collision_time.pkl", "wb+") as f:
+        dump(times_dist, f)
+    fig = plt.figure()
+    ax = plt.axes()
+    ax.bar(times_dist["centres"], times_dist["counts"], times_dist["width"])
+    plt.show()
 
-    # sim.comic_strip(9)
+    # sim.comic_strip(4)
