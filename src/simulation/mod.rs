@@ -46,6 +46,16 @@ impl Simulation {
             .map_err(|_| PyValueError::new_err("Bad dynamics in the simulation."))
     }
 
+    /// Run through `n` collisions, usually to thermalise the simulation.
+    #[pyo3(name = "run_n_collisions")]
+    fn py_run_n_collisions(&mut self, n: usize) -> PyResult<()> {
+        println!("Running through collisions...");
+        for _ in tqdm(0..n) {
+            self.py_next_collision()?;
+        }
+        Ok(())
+    }
+
     /// Run the simulation and record the times at which collisions take place,
     /// aggregating them into a histogram which is returned in the form of a
     /// Python dictionary that maps the bin centres to the counts. The system
@@ -124,5 +134,53 @@ impl Simulation {
         checker.join().unwrap();
 
         Ok(())
+    }
+
+    /// Run the simulation and record the times between which `n` collisions
+    /// take place. Aggregate the data into a histogram.  The system must have
+    /// previously been initialised, otherwise this is undefined.
+    fn nth_collision_times(
+        &mut self,
+        n: usize,
+        no_collisions: usize,
+        left: f64,
+        right: f64,
+        bins: usize,
+    ) -> PyResult<HashMap<String, PyObject>> {
+        let (tx_raw, rx_raw) = mpsc::channel();
+        let mut current_time = 0f64;
+
+        println!("Calculating collisions...");
+        for _ in tqdm(0..no_collisions / n) {
+            let mut local_sum = 0f64;
+            for _ in 0..n {
+                self.py_next_collision()?;
+                let collision_delta_t = self.global_time - current_time;
+                current_time = self.global_time;
+                local_sum += collision_delta_t;
+            }
+            tx_raw.send(local_sum).unwrap();
+        }
+        // drop the tx_raw to cause the channel to hang up
+        drop(tx_raw);
+
+        let (tx_hist, rx_hist) = mpsc::channel();
+        thread::spawn(move || {
+            let data = Box::new(rx_raw.into_iter());
+            let hist = Histogram::bin(left, right, bins, data);
+            tx_hist.send(hist).unwrap();
+        });
+
+        let hist = rx_hist.recv().unwrap();
+        let dict_elements = Python::with_gil(|py| {
+            vec![
+                (String::from("width"), hist.width().to_object(py)),
+                (String::from("centres"), hist.centres().to_object(py)),
+                (String::from("counts"), hist.counts().to_object(py)),
+            ]
+        });
+
+        let dict_map: HashMap<String, PyObject> = dict_elements.into_iter().collect();
+        Ok(dict_map)
     }
 }
