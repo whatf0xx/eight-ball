@@ -1,5 +1,5 @@
 use crate::dynamics::ball::{Ball, Container};
-use crate::dynamics::collide::Collide;
+use crate::dynamics::collide::{delta_v_through_collision, Collide};
 use crate::dynamics::maths::FloatVec;
 use crate::dynamics::DynamicsError;
 use crate::simulation::collision::{CollisionEvent, CollisionPartner};
@@ -197,10 +197,10 @@ impl Simulation {
         collision_event.ok_or(DynamicsError::SimulationFailure)
     }
 
+    /// Run the simulation to and including the next collision that is scheduled
+    /// to occur. Calculate the dynamics of the collision and update the
+    /// collisions queue accordingly.
     pub(crate) fn step_through_collision(&mut self) -> Result<(), DynamicsError> {
-        // Run the simulation to and including the next collision that is scheduled
-        // to occur. Calculate the dynamics of the collision and update the
-        // collisions queue accordingly.
         let next_collision = self.next_collision_or_err()?;
         let (i, j, t, _) = next_collision.into();
         self.step_until(t)?;
@@ -210,6 +210,31 @@ impl Simulation {
             self.push_collisions(j);
         }
         Ok(())
+    }
+
+    /// Run the simulation to and including the next collision that is scheduled
+    /// to occur. Calculate the dynamics of the collision and update the
+    /// collisions queue accordingly. In the case of a collision occuring with
+    /// the container, return the magnitude of the momentum change that occured.
+    /// Otherwise, return a `None` variant.
+    pub(crate) fn step_through_collision_delta_v(&mut self) -> Result<Option<f64>, DynamicsError> {
+        let next_collision = self.next_collision_or_err()?;
+        let (i, j, t, _) = next_collision.into();
+        self.step_until(t)?;
+        self.collide_members(i, j)?;
+        self.push_collisions(i);
+        match j {
+            CollisionPartner::Ball(j) => {
+                self.push_collisions(j);
+                Ok(None)
+            }
+            CollisionPartner::Container => {
+                let ball = &self.balls[i];
+                let container = &self.container;
+                let delta_v = delta_v_through_collision(ball, container)?;
+                Ok(Some(delta_v))
+            }
+        }
     }
 
     pub fn run_collisions(&mut self, n: usize) -> Result<(), DynamicsError> {
