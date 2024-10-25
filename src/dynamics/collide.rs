@@ -92,6 +92,7 @@ impl Collide<Container> for Ball {
         // N.B. the velocity change for the ball (useful in calculating the
         // momentum change/pressure due to the collisions) is 2 * beta
         self.set_vel(alpha * loc - beta * normed_normal);
+        other.push_pressure_data(2f64 * beta);
         Ok(())
     }
 }
@@ -116,6 +117,12 @@ fn smallest_positive(a: f64, b: f64) -> Option<f64> {
 /// change in the direction of the centre of the container (no momentum is
 /// changed perpendicular to this). As such, the return type within the
 /// `Result` wrapper is a simple `f64`.
+///
+/// N.B. I don't think this is the best way to do this, or at least the only
+/// way. Consider instead that if you have the before and after velocities of
+/// the ball, then you can just take the difference between the two to get the
+/// momentum change in the radial direction. Then, take the magnitude of the
+/// resultant vector and you're done.
 pub fn delta_v_through_collision(ball: &Ball, container: &Container) -> Result<f64, DynamicsError> {
     let normed_normal = normalised_difference(ball, container)?;
     let beta = ball.vel.dot(&normed_normal);

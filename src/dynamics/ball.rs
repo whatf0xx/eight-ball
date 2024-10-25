@@ -50,21 +50,27 @@ impl Ball {
     }
 }
 
-pub struct PressureData {
-    delta_p: f64,
-    time: f64,
-}
+// pub struct PressureData {
+//     delta_p: f64,
+//     time: f64,
+// }
 
 #[pyclass(subclass)]
 #[pyo3(name = "_Container")]
 pub struct Container {
     #[pyo3(get, set)]
     pub(crate) r: f64,
-    pressure_tx: Option<Sender<PressureData>>,
+    pressure_tx: Option<Sender<f64>>,
 }
 
 impl Container {
-    pub fn new(r: f64, pressure_tx: Option<Sender<PressureData>>) -> Container {
+    pub fn new(r: f64, pressure_tx: Option<Sender<f64>>) -> Container {
         Container { r, pressure_tx }
+    }
+
+    pub fn push_pressure_data(&self, delta_p: f64) {
+        if let Some(sender) = &self.pressure_tx {
+            sender.send(delta_p).unwrap(); // panic if this fails, for now
+        }
     }
 }
