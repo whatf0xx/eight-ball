@@ -89,8 +89,6 @@ impl Collide<Container> for Ball {
         let alpha = self.vel.dot(&loc);
         let beta = self.vel.dot(&normed_normal);
 
-        // N.B. the velocity change for the ball (useful in calculating the
-        // momentum change/pressure due to the collisions) is 2 * beta
         self.set_vel(alpha * loc - beta * normed_normal);
         Ok(())
     }
@@ -108,16 +106,4 @@ fn smallest_positive(a: f64, b: f64) -> Option<f64> {
         // were already stationary relative to each other.
         None
     }
-}
-
-/// In some cases, it is useful to have a calculation of the velocity change
-/// for a ball colliding with the container. This function calculates and
-/// returns that velocity change, returning the magnitude of the velocity
-/// change in the direction of the centre of the container (no momentum is
-/// changed perpendicular to this). As such, the return type within the
-/// `Result` wrapper is a simple `f64`.
-pub fn delta_v_through_collision(ball: &Ball, container: &Container) -> Result<f64, DynamicsError> {
-    let normed_normal = normalised_difference(ball, container)?;
-    let beta = ball.vel.dot(&normed_normal);
-    Ok(beta * 2.)
 }
