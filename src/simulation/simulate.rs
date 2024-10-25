@@ -2,7 +2,8 @@ use crate::dynamics::ball::{Ball, Container};
 use crate::dynamics::collide::Collide;
 use crate::dynamics::maths::FloatVec;
 use crate::dynamics::DynamicsError;
-use crate::simulation::event::{CollisionEvent, CollisionPartner, DataEvent};
+use crate::simulation::data::{DataEvent, PostData, PreData};
+use crate::simulation::event::{CollisionEvent, CollisionPartner};
 use itertools::Itertools;
 use pyo3::prelude::*;
 use std::cmp::Reverse;
@@ -219,15 +220,16 @@ impl Simulation {
         let next_collision = self.next_collision_or_err()?;
         let (i, j, t, _) = next_collision.into();
         self.step_until(t)?;
-        // This is when the collision happens
-        let time = self.global_time;
-        let old_vels_a = self.balls[i].vel;
-        // match j {
-        //     CollisionPartner::Ball(j) => {
-        //         let old_vels_b =
-        //     }
-        // }
-        todo!();
+        let pre_data = PreData::from_indices(self, i, j);
+        self.collide_members(i, j)?;
+        let post_data = PostData::from_indices(self, i, j);
+
+        self.push_collisions(i);
+        if let CollisionPartner::Ball(j) = j {
+            self.push_collisions(j);
+        }
+
+        Ok((pre_data, post_data).into())
     }
 
     pub fn run_collisions(&mut self, n: usize) -> Result<(), DynamicsError> {
@@ -237,5 +239,15 @@ impl Simulation {
         }
 
         Ok(())
+    }
+}
+
+impl Iterator for Simulation {
+    type Item = DataEvent;
+    fn next(&mut self) -> Option<Self::Item> {
+        // We want to panic rather than convert the `Err` into a `None` because
+        // a physics error should blow up the simulation rather than quietly
+        // stop the generator.
+        Some(self.step_with_data().unwrap())
     }
 }

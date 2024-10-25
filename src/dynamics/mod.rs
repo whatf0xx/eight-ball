@@ -9,6 +9,7 @@ use ball::{Ball, Container};
 use collide::Collide;
 use maths::FloatVec;
 
+#[derive(Debug)]
 pub enum DynamicsError {
     StationaryCollision,
     PointParticleCollision,
