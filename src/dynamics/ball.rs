@@ -1,6 +1,5 @@
 use crate::dynamics::maths::{approx_eq_f64, FloatVec};
 use pyo3::prelude::*;
-use std::sync::mpsc::Sender;
 
 #[pyclass(subclass)]
 #[pyo3(name = "_Ball")]
@@ -50,21 +49,15 @@ impl Ball {
     }
 }
 
-pub struct PressureData {
-    delta_p: f64,
-    time: f64,
-}
-
 #[pyclass(subclass)]
 #[pyo3(name = "_Container")]
 pub struct Container {
     #[pyo3(get, set)]
     pub(crate) r: f64,
-    pressure_tx: Option<Sender<PressureData>>,
 }
 
 impl Container {
-    pub fn new(r: f64, pressure_tx: Option<Sender<PressureData>>) -> Container {
-        Container { r, pressure_tx }
+    pub fn new(r: f64) -> Container {
+        Container { r }
     }
 }

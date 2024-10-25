@@ -26,7 +26,7 @@ pub struct Simulation {
 impl Simulation {
     pub fn new(radius: f64) -> Simulation {
         let global_time = 0f64;
-        let container = Container::new(radius, None);
+        let container = Container::new(radius);
         let balls = Vec::new();
         let collisions = BinaryHeap::new();
         let params = Params { delta: 1e-6 };

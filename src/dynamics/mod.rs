@@ -105,9 +105,7 @@ impl Container {
     #[new]
     #[pyo3(signature = (r=1f64))]
     fn py_new(r: f64) -> Self {
-        // Here, we don't need to put anything in the `pressure_tx` as
-        // `Container`s constructed in Python don't need to send anything.
-        Self::new(r, None)
+        Self::new(r)
     }
 }
 
