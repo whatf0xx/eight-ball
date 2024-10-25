@@ -183,4 +183,21 @@ impl Simulation {
         let dict_map: HashMap<String, PyObject> = dict_elements.into_iter().collect();
         Ok(dict_map)
     }
+
+    fn measure_pressure(
+        &mut self,
+        average_over: usize,
+        collisions: usize,
+    ) -> PyResult<HashMap<String, PyObject>> {
+        let (pressure_tx, pressure_rx) = mpsc::channel();
+
+        self.container.set_tx_handle(pressure_tx);
+        thread::spawn(move || {
+            // keep track of the total momentum change within every time window
+            let mut rolling_sum = 0f64;
+            for delta_p in pressure_rx {
+                rolling_sum += delta_p;
+            }
+        });
+    }
 }
