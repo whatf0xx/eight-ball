@@ -2,7 +2,7 @@ use crate::dynamics::ball::{Ball, Container};
 use crate::dynamics::collide::Collide;
 use crate::dynamics::maths::FloatVec;
 use crate::dynamics::DynamicsError;
-use crate::simulation::collision::{CollisionEvent, CollisionPartner};
+use crate::simulation::event::{CollisionEvent, CollisionPartner, DataEvent};
 use itertools::Itertools;
 use pyo3::prelude::*;
 use std::cmp::Reverse;
@@ -210,6 +210,24 @@ impl Simulation {
             self.push_collisions(j);
         }
         Ok(())
+    }
+
+    /// Run the simulation through the next collision, as above, but publish
+    /// the data associated with the collision as a `DataEvent` that can be
+    /// streamed.
+    fn step_with_data(&mut self) -> Result<DataEvent, DynamicsError> {
+        let next_collision = self.next_collision_or_err()?;
+        let (i, j, t, _) = next_collision.into();
+        self.step_until(t)?;
+        // This is when the collision happens
+        let time = self.global_time;
+        let old_vels_a = self.balls[i].vel;
+        // match j {
+        //     CollisionPartner::Ball(j) => {
+        //         let old_vels_b =
+        //     }
+        // }
+        todo!();
     }
 
     pub fn run_collisions(&mut self, n: usize) -> Result<(), DynamicsError> {

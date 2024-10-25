@@ -1,4 +1,7 @@
-use crate::dynamics::maths::{approx_eq_f64, FloatVec};
+use crate::dynamics::{
+    ball::{Ball, Container},
+    maths::{approx_eq_f64, FloatVec},
+};
 
 #[derive(Clone, Copy)]
 pub enum CollisionPartner {

@@ -1,6 +1,7 @@
 use crate::dynamics::ball::Ball;
 use pyo3::{exceptions::PyValueError, prelude::*};
-mod collision;
+mod data;
+mod event;
 mod histogram;
 use histogram::Histogram;
 pub mod simulate;

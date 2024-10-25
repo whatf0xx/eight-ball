@@ -110,6 +110,14 @@ impl FloatVec {
         }
     }
 
+    pub fn magnitude(&self) -> f64 {
+        self.dot(self).sqrt()
+    }
+
+    pub fn normalize(&self) -> FloatVec {
+        *self / self.magnitude()
+    }
+
     pub fn approx_eq(&self, other: &FloatVec, ulp: u64) -> bool {
         // Determine if the two SafeFloatVecs are equal to within
         // `n` units in the last place. As `n` is by default 1 and
