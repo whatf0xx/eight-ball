@@ -68,10 +68,6 @@ impl Container {
         Container { r, pressure_tx }
     }
 
-    pub fn set_tx_handle(&mut self, handle: Sender<f64>) {
-        self.pressure_tx = Some(handle);
-    }
-
     pub fn push_pressure_data(&self, delta_p: f64) {
         if let Some(sender) = &self.pressure_tx {
             sender.send(delta_p).unwrap(); // panic if this fails, for now
