@@ -48,7 +48,7 @@ impl Simulation {
     }
 
     /// Run through `n` collisions, usually to thermalise the simulation.
-    #[pyo3(name = "run_n_collisions")]
+    #[pyo3(name = "thermalize")]
     fn py_run_n_collisions(&mut self, n: usize) -> PyResult<()> {
         println!("Running through collisions...");
         for _ in tqdm(0..n) {
