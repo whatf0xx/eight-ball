@@ -48,10 +48,19 @@ impl Simulation {
     }
 
     /// Run through `n` collisions, usually to thermalise the simulation.
-    #[pyo3(name = "thermalize")]
-    fn py_run_n_collisions(&mut self, n: usize) -> PyResult<()> {
-        println!("Running through collisions...");
-        for _ in tqdm(0..n) {
+    #[pyo3(name = "thermalize", signature = (n, verbose=true))]
+    fn py_run_n_collisions(&mut self, n: usize, verbose: bool) -> PyResult<()> {
+        let mut norm;
+        let mut verb;
+        let it: &mut dyn Iterator<Item = usize> = if verbose {
+            println!("Running through collisions...");
+            verb = tqdm(0..n);
+            &mut verb
+        } else {
+            norm = 0..n;
+            &mut norm
+        };
+        for _ in it {
             self.py_next_collision()?;
         }
         Ok(())
