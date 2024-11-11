@@ -50,6 +50,7 @@ impl Simulation {
     /// Run through `n` collisions, usually to thermalise the simulation.
     #[pyo3(name = "thermalize", signature = (n, verbose=true))]
     fn py_run_n_collisions(&mut self, n: usize, verbose: bool) -> PyResult<()> {
+        // TODO: rewrite the below as a macro
         let mut norm;
         let mut verb;
         let it: &mut dyn Iterator<Item = usize> = if verbose {
@@ -60,10 +61,47 @@ impl Simulation {
             norm = 0..n;
             &mut norm
         };
+
         for _ in it {
             self.py_next_collision()?;
         }
         Ok(())
+    }
+
+    /// Run the simulation and record the pressure exerted on the walls of the
+    /// container by the colliding balls inside it. Return this as a Python
+    /// dictionary. This starts taking data immediately, so if it is run on an
+    /// un-thermalized simulation the results will be janky. `n` is the number
+    /// of collisions that will be recorded, and hence the simulation runtime
+    /// is proportional to `n`. `window_width` gives the width of the window
+    /// used for smooth averaging of the system pressure.
+    #[pyo3(name = "pressure")]
+    fn py_pressure(
+        &mut self,
+        n: usize,
+        window_width: usize,
+    ) -> PyResult<HashMap<String, PyObject>> {
+        let (mut time, mut pressure) = (0f64, 0f64);
+        let (mut time_window, mut pressure_window) = (Vec::new(), Vec::new());
+
+        for _ in 0..window_width {
+            let delta_p = loop {
+                match self.next().unwrap().container_pressure() {
+                    Some(pressure) => pressure,
+                    None => continue,
+                }
+            };
+        }
+        let mut times = vec![0f64; n];
+        let mut pressures = vec![0f64; n];
+        for _ in 0..n {
+            for col in self {
+                if let Some(pressure) = col.container_pressure() {}
+            }
+            if rolling_av.is_nan() {}
+            for _ in 1..window_width {}
+        }
+        todo!()
     }
 
     /// Run the simulation and record the times at which collisions take place,
@@ -194,3 +232,19 @@ impl Simulation {
         Ok(dict_map)
     }
 }
+
+// fn run_later(n: usize, verbose: bool) -> impl Iterator<Item = usize> {
+//     let mut progress = None;
+//     let mut regular = None;
+
+//     if verbose {
+//         progress = Some(tqdm(0..n));
+//     } else {
+//         regular = Some(0..n)
+//     }
+
+//     progress
+//         .into_iter()
+//         .flatten()
+//         .chain(regular.into_iter().flatten())
+// }

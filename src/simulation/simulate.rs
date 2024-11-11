@@ -240,6 +240,10 @@ impl Simulation {
 
         Ok(())
     }
+
+    pub fn iter_pressure<'a>(&'a mut self) -> SimulationPressures<'a> {
+        SimulationPressures { parent: self }
+    }
 }
 
 impl Iterator for Simulation {
@@ -249,5 +253,16 @@ impl Iterator for Simulation {
         // a physics error should blow up the simulation rather than quietly
         // stop the generator.
         Some(self.step_with_data().unwrap())
+    }
+}
+
+pub struct SimulationPressures<'a> {
+    parent: &'a mut Simulation,
+}
+
+impl<'a> Iterator for SimulationPressures<'a> {
+    type Item = (f64, f64); // that is, (time, pressure)
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
     }
 }

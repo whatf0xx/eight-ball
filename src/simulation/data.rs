@@ -118,36 +118,28 @@ impl From<(PreData, PostData)> for DataEvent {
     }
 }
 
-// impl DataEvent {
-//     pub fn new(ball: BallData, other: DataPartner, time: f64) -> Self {
-//         DataEvent { ball, other, time }
-//     }
-
-//     pub fn collision_centre(&self) -> FloatVec {
-//         let r_a = self.ball.position;
-//         match &self.other {
-//             DataPartner::Ball(ball_data) => {
-//                 let r_b = ball_data.position;
-//                 0.5 * (r_a + r_b)
-//             }
-//             DataPartner::Container(radius) => {
-//                 let line = r_a.normalize();
-//                 line * *radius
-//             }
-//         }
-//     }
-
-//     /// Calculate the momentum imparted on the container by the collision. If
-//     /// the collision is between two balls, then this will return the `None`
-//     /// variant, otherwise this will be equal to the magnitude in the change
-//     /// in momentum for the ball.
-//     pub fn container_pressure(&self) -> Option<f64> {
-//         match self.other {
-//             DataPartner::Ball(_) => None,
-//             DataPartner::Container(_) => {
-//                 let delta_v = self.ball.old_vel - self.ball.new_vel;
-//                 Some(delta_v.magnitude())
-//             }
-//         }
-//     }
-// }
+impl DataEvent {
+    /// Calculate the momentum imparted on the container by the collision. If
+    /// the collision is between two balls, then this will return the `None`
+    /// variant, otherwise this will be equal to the magnitude in the change
+    /// in momentum for the ball.
+    pub fn container_pressure(&self) -> Option<f64> {
+        match self {
+            DataEvent::BallCollision {
+                time: _,
+                indices: _,
+                pres: _,
+                posts: _,
+            } => None,
+            DataEvent::ContainerCollision {
+                time: _,
+                index: _,
+                pre,
+                post,
+            } => {
+                let delta_v = pre.vel - post.vel;
+                Some(delta_v.magnitude())
+            }
+        }
+    }
+}
