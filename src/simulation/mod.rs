@@ -85,12 +85,10 @@ impl Simulation {
         n: usize,
         window_width: usize,
     ) -> PyResult<HashMap<String, PyObject>> {
-        // let (mut time_window, mut pressure_window) = (Vec::new(), Vec::new());
-        let pressure_events = self.iter_pressure();
         let (mut time_deque, mut pressure_deque): (VecDeque<f64>, VecDeque<f64>) =
-            pressure_events.take(window_width).collect();
+            self.iter_pressure().take(window_width).collect();
 
-        let pressure_events = self.iter_pressure(); // needed so the mutable reference held isn't used twice
+        let pressure_events = self.iter_pressure();
         let mut pressure_sum: f64 = pressure_deque.iter().sum();
         let (times, pressures): (Vec<f64>, Vec<f64>) = pressure_events
             .into_iter()
