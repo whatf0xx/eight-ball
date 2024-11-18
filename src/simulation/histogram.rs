@@ -24,6 +24,7 @@ impl Histogram {
         }
     }
 
+    #[allow(dead_code)]
     pub fn edges(&self) -> Vec<f64> {
         let width = self.width();
         (0..=self.bins)

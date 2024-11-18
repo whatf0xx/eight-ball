@@ -6,7 +6,11 @@ mod histogram;
 use histogram::Histogram;
 pub mod simulate;
 use simulate::Simulation;
-use std::{collections::HashMap, sync::mpsc, thread};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::mpsc,
+    thread,
+};
 use tqdm::tqdm;
 
 #[pymethods]
@@ -81,27 +85,39 @@ impl Simulation {
         n: usize,
         window_width: usize,
     ) -> PyResult<HashMap<String, PyObject>> {
-        let (mut time, mut pressure) = (0f64, 0f64);
-        let (mut time_window, mut pressure_window) = (Vec::new(), Vec::new());
+        // let (mut time_window, mut pressure_window) = (Vec::new(), Vec::new());
+        let pressure_events = self.iter_pressure();
+        let (mut time_deque, mut pressure_deque): (VecDeque<f64>, VecDeque<f64>) =
+            pressure_events.take(window_width).collect();
 
-        for _ in 0..window_width {
-            let delta_p = loop {
-                match self.next().unwrap().container_pressure() {
-                    Some(pressure) => pressure,
-                    None => continue,
-                }
-            };
-        }
-        let mut times = vec![0f64; n];
-        let mut pressures = vec![0f64; n];
-        for _ in 0..n {
-            for col in self {
-                if let Some(pressure) = col.container_pressure() {}
-            }
-            if rolling_av.is_nan() {}
-            for _ in 1..window_width {}
-        }
-        todo!()
+        let pressure_events = self.iter_pressure(); // needed so the mutable reference held isn't used twice
+        let mut pressure_sum: f64 = pressure_deque.iter().sum();
+        let (times, pressures): (Vec<f64>, Vec<f64>) = pressure_events
+            .into_iter()
+            .take(n)
+            .map(|(time, pressure)| {
+                let old_pressure = pressure_deque.pop_front().unwrap();
+                time_deque.pop_front();
+                pressure_sum -= old_pressure;
+                pressure_sum += pressure;
+
+                let t_start = time_deque.front().unwrap().clone();
+                let t_end = time;
+                time_deque.push_back(time);
+                pressure_deque.push_back(pressure);
+                (t_end - t_start, pressure_sum)
+            })
+            .collect();
+
+        let dict_elements = Python::with_gil(|py| {
+            vec![
+                (String::from("times"), times.to_object(py)),
+                (String::from("pressures"), pressures.to_object(py)),
+            ]
+        });
+
+        let dict_map: HashMap<String, PyObject> = dict_elements.into_iter().collect();
+        Ok(dict_map)
     }
 
     /// Run the simulation and record the times at which collisions take place,

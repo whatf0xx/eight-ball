@@ -1,4 +1,4 @@
-use crate::dynamics::{ball::Ball, maths::FloatVec};
+use crate::dynamics::ball::Ball;
 
 use super::{event::CollisionPartner, simulate::Simulation};
 
@@ -104,15 +104,19 @@ impl From<(PreData, PostData)> for DataEvent {
             },
             (
                 PreData::BallCollision {
-                    time,
-                    indices,
-                    pres,
+                    time: _,
+                    indices: _,
+                    pres: _,
                 },
-                PostData::ContainerCollision { post },
+                PostData::ContainerCollision { post: _ },
             ) => panic!(),
             (
-                PreData::ContainerCollision { time, index, pre },
-                PostData::BallCollision { posts },
+                PreData::ContainerCollision {
+                    time: _,
+                    index: _,
+                    pre: _,
+                },
+                PostData::BallCollision { posts: _ },
             ) => panic!(),
         }
     }
@@ -140,6 +144,23 @@ impl DataEvent {
                 let delta_v = pre.vel - post.vel;
                 Some(delta_v.magnitude())
             }
+        }
+    }
+
+    pub fn time(&self) -> f64 {
+        match self {
+            DataEvent::BallCollision {
+                time,
+                indices: _,
+                pres: _,
+                posts: _,
+            } => *time,
+            DataEvent::ContainerCollision {
+                time,
+                index: _,
+                post: _,
+                pre: _,
+            } => *time,
         }
     }
 }

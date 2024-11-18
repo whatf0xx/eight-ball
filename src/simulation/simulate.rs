@@ -261,8 +261,14 @@ pub struct SimulationPressures<'a> {
 }
 
 impl<'a> Iterator for SimulationPressures<'a> {
-    type Item = (f64, f64); // that is, (time, pressure)
+    type Item = (f64, f64); // that is, (time, delta_p)
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        for event in self.parent.into_iter() {
+            match event.container_pressure() {
+                Some(delta_p) => return Some((event.time(), delta_p)),
+                None => continue,
+            };
+        }
+        panic!()
     }
 }
